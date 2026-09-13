@@ -1,0 +1,9 @@
+.DS_Store
+Архив.zip
+
+# Raw supplier photo dump — not referenced by the site (served images live in images/)
+catalog/
+
+# Deployed separately (Cloudflare Worker / Render.com) — not part of the static site
+capi-worker/
+pdf-service/

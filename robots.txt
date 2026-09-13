@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://joma-retail.kz/sitemap.xml
