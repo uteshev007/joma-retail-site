@@ -146,6 +146,12 @@ h1,h2,h3{font-family:'Clarendon LT Bold','Clarendon Cn BT',Georgia,serif;font-we
 .catalog-add-btn:hover{background:var(--orange);border-color:var(--orange);transform:scale(1.08)}
 .catalog-add-btn.is-added{background:var(--orange);border-color:var(--orange)}
 
+/* Catalog product cards: budget/mid/premium price-segment badge (no exact prices shown) */
+.price-tier{position:absolute;top:10px;left:10px;z-index:2;padding:3px 9px;border-radius:999px;font:9px var(--mono);text-transform:uppercase;letter-spacing:calc(.04em + .5pt);color:#f4f0e8;background:rgba(23,23,23,.55);border:1px solid rgba(244,240,232,.28);-webkit-backdrop-filter:blur(4px) saturate(120%);backdrop-filter:blur(4px) saturate(120%)}
+.price-tier--mid{border-color:rgba(244,240,232,.5)}
+.price-tier--premium{background:var(--orange);border-color:var(--orange);color:#171717}
+@media(max-width:800px){.price-tier{font-size:8px;padding:2px 7px;top:8px;left:8px}}
+
 /* Floating "set" (cart) widget: toggle pill + slide-over panel */
 .cart-toggle{position:fixed;right:20px;bottom:20px;z-index:30;display:flex;align-items:center;gap:10px;padding:14px 20px 14px 16px;border-radius:999px;background:var(--ink);color:#f4f0e8;border:1px solid rgba(244,240,232,.2);box-shadow:0 14px 34px rgba(0,0,0,.32);cursor:pointer;font:11px var(--mono);text-transform:uppercase;letter-spacing:calc(.04em + 1pt);opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s ease,transform .25s ease}
 .cart-toggle.is-visible{opacity:1;transform:none;pointer-events:auto}
