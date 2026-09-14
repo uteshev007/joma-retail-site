@@ -83,7 +83,7 @@ function ensureCartWidget() {
     <label class="cart-team-field">Название команды (необязательно)
       <input type="text" class="cart-team" placeholder="Например, FC Astana">
     </label>
-    <a class="button button-light cart-submit" href="https://wa.me/${CART_PHONE}" target="_blank" rel="noopener" data-capi-handled="true">Отправить набор в WhatsApp <span>→</span></a>
+    <a class="button button-light cart-submit" href="https://wa.me/${CART_PHONE}" rel="noopener" data-capi-handled="true">Отправить набор в WhatsApp <span>→</span></a>
   `;
 
   document.body.appendChild(overlay);
@@ -113,9 +113,11 @@ function ensureCartWidget() {
   }
   teamInput.addEventListener('input', updateSubmitLink);
 
-  submitLink.addEventListener('click', () => {
+  submitLink.addEventListener('click', (event) => {
     const items = cartRead();
     if (!items.length) return;
+    event.preventDefault();
+
     if (typeof trackEvent === 'function') {
       trackEvent('Lead', {
         content_name: 'Набор из каталога',
@@ -123,27 +125,36 @@ function ensureCartWidget() {
         value: items.reduce((sum, item) => sum + item.qty, 0),
       });
     }
-    // Fire-and-forget: sends the cart to the KP bot so the manager gets a
-    // priced quote in Telegram. Never blocks or breaks the WhatsApp link.
-    try {
-      fetch(QUOTE_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team: teamInput.value.trim(), items }),
-        keepalive: true,
-      }).catch(() => {});
-    } catch {
-      // ignore — quote creation is best-effort, WhatsApp send is what matters
-    }
-    // Clear the cart AFTER this tick — the browser reads the link's href to
-    // open WhatsApp only once this click handler finishes, so clearing (and
-    // re-rendering, which rewrites this same href) immediately would send an
-    // empty message instead of the list the visitor just built.
-    window.setTimeout(() => {
+
+    const team = teamInput.value.trim();
+    const waUrl = submitLink.getAttribute('href');
+
+    // On mobile, following the wa.me link hands off to the WhatsApp app,
+    // which backgrounds/suspends this page — a plain fire-and-forget fetch
+    // (even with keepalive) can get cut off mid-flight before it reaches
+    // the network. So we hold the handoff open just long enough for the
+    // request to actually go out: navigate once it settles, or after a
+    // short timeout either way so a slow/offline connection never blocks
+    // sending the WhatsApp message itself.
+    let handled = false;
+    const goToWhatsApp = () => {
+      if (handled) return;
+      handled = true;
       cartWrite([]);
       cartRenderAll();
       closePanel();
-    }, 0);
+      window.location.href = waUrl;
+    };
+
+    fetch(QUOTE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ team, items }),
+      keepalive: true,
+    })
+      .catch(() => {})
+      .finally(goToWhatsApp);
+    window.setTimeout(goToWhatsApp, 600);
   });
 
   window.cartUpdateSubmitLink = updateSubmitLink;
