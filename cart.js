@@ -204,7 +204,9 @@ function initCatalogCart() {
   document.querySelectorAll('.catalog-list-grid .catalog-item').forEach((card) => {
     if (card.querySelector('.catalog-add-btn')) return;
     const img = card.querySelector('img');
-    const nameEl = card.querySelector('span');
+    // Scoped to .catalog-item-link — a bare 'span' would match the price-tier
+    // badge (Бюджет/Средний/Премиум) instead, since it's the first <span> in the card.
+    const nameEl = card.querySelector('.catalog-item-link span');
     if (!img || !nameEl) return;
     const model = nameEl.textContent.trim();
     const sportGroupTitle = card.closest('.catalog-category')?.querySelector('.catalog-category-title')?.textContent.trim();
