@@ -2,21 +2,12 @@ const CART_STORAGE_KEY = 'joma_cart_v1';
 const CART_PHONE = '77080298284';
 const QUOTE_ENDPOINT = 'https://joma-capi.joma-retail.workers.dev/quote';
 
-// sendBeacon survives the page being backgrounded/unloaded (e.g. the OS
-// handing off to the WhatsApp app on mobile right after this click), unlike
-// a plain fetch — even with keepalive — which can get cut off mid-flight.
-function sendQuoteBeacon(team, items) {
-  const payload = JSON.stringify({ team, items });
-  if (navigator.sendBeacon) {
-    const blob = new Blob([payload], { type: 'application/json' });
-    if (navigator.sendBeacon(QUOTE_ENDPOINT, blob)) return;
-  }
-  fetch(QUOTE_ENDPOINT, {
+function sendQuoteRequest(team, items) {
+  return fetch(QUOTE_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: payload,
-    keepalive: true,
-  }).catch(() => {});
+    body: JSON.stringify({ team, items }),
+  });
 }
 
 function cartRead() {
@@ -130,9 +121,11 @@ function ensureCartWidget() {
   }
   teamInput.addEventListener('input', updateSubmitLink);
 
-  submitLink.addEventListener('click', () => {
+  submitLink.addEventListener('click', (event) => {
     const items = cartRead();
     if (!items.length) return;
+    event.preventDefault();
+
     if (typeof trackEvent === 'function') {
       trackEvent('Lead', {
         content_name: 'Набор из каталога',
@@ -140,16 +133,30 @@ function ensureCartWidget() {
         value: items.reduce((sum, item) => sum + item.qty, 0),
       });
     }
-    sendQuoteBeacon(teamInput.value.trim(), items);
-    // Clear the cart AFTER this tick — the browser reads the link's href to
-    // open WhatsApp only once this click handler finishes, so clearing (and
-    // re-rendering, which rewrites this same href) immediately would send an
-    // empty message instead of the list the visitor just built.
-    window.setTimeout(() => {
+
+    const waUrl = submitLink.getAttribute('href');
+
+    // Hold the WhatsApp handoff open just long enough for the quote request
+    // to actually complete: sendBeacon (the usual tool for "fire this as
+    // the page navigates away") turned out unreliable on iOS Chrome for
+    // this exact click-then-navigate pattern, so a plain awaited fetch —
+    // confirmed working on the affected device — is used instead, capped
+    // so a slow/offline connection never blocks sending the WhatsApp
+    // message itself.
+    let handled = false;
+    const goToWhatsApp = () => {
+      if (handled) return;
+      handled = true;
       cartWrite([]);
       cartRenderAll();
       closePanel();
-    }, 0);
+      if (!window.open(waUrl, '_blank', 'noopener')) window.location.href = waUrl;
+    };
+
+    sendQuoteRequest(teamInput.value.trim(), items)
+      .catch(() => {})
+      .finally(goToWhatsApp);
+    window.setTimeout(goToWhatsApp, 1500);
   });
 
   window.cartUpdateSubmitLink = updateSubmitLink;

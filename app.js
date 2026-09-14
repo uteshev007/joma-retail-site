@@ -102,14 +102,10 @@ function sendCapiEvent(eventName, eventId, customData) {
     },
     custom_data: customData || {},
   });
-  // Most calls here happen right as the visitor taps a WhatsApp link, which
-  // on mobile hands off to the WhatsApp app and backgrounds this page —
-  // sendBeacon (unlike fetch, even with keepalive) is built to still
-  // deliver the request when that happens.
-  if (navigator.sendBeacon) {
-    const blob = new Blob([payload], { type: 'application/json' });
-    if (navigator.sendBeacon(CAPI_ENDPOINT, blob)) return;
-  }
+  // sendBeacon looked like the right tool here (this fires right as the
+  // visitor taps a WhatsApp link and the page backgrounds), but it turned
+  // out unreliable on iOS Chrome for this exact pattern — plain fetch with
+  // keepalive is what's actually confirmed working.
   fetch(CAPI_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
