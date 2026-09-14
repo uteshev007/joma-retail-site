@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Диагностика заявки</title>
+<style>
+  body { font-family: -apple-system, sans-serif; padding: 20px; font-size: 16px; line-height: 1.5; }
+  button { font-size: 18px; padding: 14px 20px; margin: 10px 0; width: 100%; }
+  pre { white-space: pre-wrap; word-break: break-word; background: #f2f2f2; padding: 12px; border-radius: 8px; font-size: 13px; }
+  .ok { color: #0a7a2f; }
+  .fail { color: #c0392b; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h1>Диагностика связи с ботом</h1>
+  <p>Текущий адрес страницы: <code id="loc"></code></p>
+  <button id="run">Проверить соединение</button>
+  <pre id="result">Нажмите кнопку выше.</pre>
+
+  <script>
+    document.getElementById('loc').textContent = window.location.href;
+    const QUOTE_ENDPOINT = 'https://joma-capi.joma-retail.workers.dev/quote';
+
+    document.getElementById('run').addEventListener('click', async () => {
+      const out = document.getElementById('result');
+      out.className = '';
+      out.textContent = 'Отправляю тестовый запрос...';
+      const payload = {
+        team: 'ДИАГНОСТИКА ' + new Date().toLocaleTimeString('ru-RU'),
+        items: [{ category: 'Поло', model: 'HOBBY', img: 'images/polo/hobby.jpg', qty: 1 }],
+      };
+      try {
+        const start = Date.now();
+        const response = await fetch(QUOTE_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const ms = Date.now() - start;
+        const text = await response.text();
+        out.className = response.ok ? 'ok' : 'fail';
+        out.textContent = `HTTP ${response.status} за ${ms} мс\n\n${text}\n\n` +
+          (response.ok
+            ? 'УСПЕХ — проверьте Telegram, должно прийти сообщение "ДИАГНОСТИКА ...".'
+            : 'ОШИБКА на уровне сервера — пришлите этот текст целиком.');
+      } catch (err) {
+        out.className = 'fail';
+        out.textContent = `ОШИБКА СЕТИ до отправки на сервер:\n${err.name}: ${err.message}\n\nПришлите этот текст целиком — это самая важная часть диагностики.`;
+      }
+    });
+  </script>
+</body>
+</html>
