@@ -91,7 +91,7 @@ function getCookie(name) {
 // same event_id as the browser Pixel call so Meta deduplicates the two.
 function sendCapiEvent(eventName, eventId, customData) {
   if (META_PIXEL_ID.startsWith('REPLACE_') || CAPI_ENDPOINT.includes('example.workers.dev')) return;
-  const payload = {
+  const payload = JSON.stringify({
     event_name: eventName,
     event_id: eventId,
     event_source_url: window.location.href,
@@ -101,11 +101,19 @@ function sendCapiEvent(eventName, eventId, customData) {
       fbc: getCookie('_fbc'),
     },
     custom_data: customData || {},
-  };
+  });
+  // Most calls here happen right as the visitor taps a WhatsApp link, which
+  // on mobile hands off to the WhatsApp app and backgrounds this page —
+  // sendBeacon (unlike fetch, even with keepalive) is built to still
+  // deliver the request when that happens.
+  if (navigator.sendBeacon) {
+    const blob = new Blob([payload], { type: 'application/json' });
+    if (navigator.sendBeacon(CAPI_ENDPOINT, blob)) return;
+  }
   fetch(CAPI_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: payload,
     keepalive: true,
   }).catch(() => {});
 }

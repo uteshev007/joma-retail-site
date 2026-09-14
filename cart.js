@@ -2,6 +2,23 @@ const CART_STORAGE_KEY = 'joma_cart_v1';
 const CART_PHONE = '77080298284';
 const QUOTE_ENDPOINT = 'https://joma-capi.joma-retail.workers.dev/quote';
 
+// sendBeacon survives the page being backgrounded/unloaded (e.g. the OS
+// handing off to the WhatsApp app on mobile right after this click), unlike
+// a plain fetch — even with keepalive — which can get cut off mid-flight.
+function sendQuoteBeacon(team, items) {
+  const payload = JSON.stringify({ team, items });
+  if (navigator.sendBeacon) {
+    const blob = new Blob([payload], { type: 'application/json' });
+    if (navigator.sendBeacon(QUOTE_ENDPOINT, blob)) return;
+  }
+  fetch(QUOTE_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
+}
+
 function cartRead() {
   try {
     const raw = localStorage.getItem(CART_STORAGE_KEY);
@@ -83,7 +100,7 @@ function ensureCartWidget() {
     <label class="cart-team-field">Название команды (необязательно)
       <input type="text" class="cart-team" placeholder="Например, FC Astana">
     </label>
-    <a class="button button-light cart-submit" href="https://wa.me/${CART_PHONE}" rel="noopener" data-capi-handled="true">Отправить набор в WhatsApp <span>→</span></a>
+    <a class="button button-light cart-submit" href="https://wa.me/${CART_PHONE}" target="_blank" rel="noopener" data-capi-handled="true">Отправить набор в WhatsApp <span>→</span></a>
   `;
 
   document.body.appendChild(overlay);
@@ -113,11 +130,9 @@ function ensureCartWidget() {
   }
   teamInput.addEventListener('input', updateSubmitLink);
 
-  submitLink.addEventListener('click', (event) => {
+  submitLink.addEventListener('click', () => {
     const items = cartRead();
     if (!items.length) return;
-    event.preventDefault();
-
     if (typeof trackEvent === 'function') {
       trackEvent('Lead', {
         content_name: 'Набор из каталога',
@@ -125,36 +140,16 @@ function ensureCartWidget() {
         value: items.reduce((sum, item) => sum + item.qty, 0),
       });
     }
-
-    const team = teamInput.value.trim();
-    const waUrl = submitLink.getAttribute('href');
-
-    // On mobile, following the wa.me link hands off to the WhatsApp app,
-    // which backgrounds/suspends this page — a plain fire-and-forget fetch
-    // (even with keepalive) can get cut off mid-flight before it reaches
-    // the network. So we hold the handoff open just long enough for the
-    // request to actually go out: navigate once it settles, or after a
-    // short timeout either way so a slow/offline connection never blocks
-    // sending the WhatsApp message itself.
-    let handled = false;
-    const goToWhatsApp = () => {
-      if (handled) return;
-      handled = true;
+    sendQuoteBeacon(teamInput.value.trim(), items);
+    // Clear the cart AFTER this tick — the browser reads the link's href to
+    // open WhatsApp only once this click handler finishes, so clearing (and
+    // re-rendering, which rewrites this same href) immediately would send an
+    // empty message instead of the list the visitor just built.
+    window.setTimeout(() => {
       cartWrite([]);
       cartRenderAll();
       closePanel();
-      window.location.href = waUrl;
-    };
-
-    fetch(QUOTE_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ team, items }),
-      keepalive: true,
-    })
-      .catch(() => {})
-      .finally(goToWhatsApp);
-    window.setTimeout(goToWhatsApp, 600);
+    }, 0);
   });
 
   window.cartUpdateSubmitLink = updateSubmitLink;
