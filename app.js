@@ -180,7 +180,14 @@ document.addEventListener('click', (event) => {
   trackEvent('Lead', category ? { content_name: 'WhatsApp', content_category: category } : { content_name: 'WhatsApp' });
 });
 
-trackViewContentIfCatalog(window.location.pathname);
+// Deferred to 'load' (not called inline here): the Facebook Pixel script
+// above loads asynchronously and only sets the _fbp cookie once it actually
+// runs. Firing this synchronously at parse time — before that script has had
+// a chance to load — sends the very first, most common CAPI event with no
+// fbp on it, which is most of why Meta's Event Match Quality was low.
+window.addEventListener('load', () => {
+  trackViewContentIfCatalog(window.location.pathname);
+});
 // --- end Meta Pixel + Conversions API -----------------------------------
 
 const siteLoader = document.querySelector('.site-loader');
