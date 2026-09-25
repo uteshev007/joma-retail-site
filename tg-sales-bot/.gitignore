@@ -1,0 +1,6 @@
+shared/config.php
+db/*.sqlite
+db/*.sqlite-*
+*.log
+/photos/
+.DS_Store

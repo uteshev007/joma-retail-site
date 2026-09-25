@@ -1,0 +1,10 @@
+# Запрещает прямой доступ по URL к config.php (токены/ключи) и остальным
+# include-файлам — эта папка не предназначена для веб-запросов вообще
+# (раздел 7 ТЗ). Работает и под Apache 2.2, и под 2.4.
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>
