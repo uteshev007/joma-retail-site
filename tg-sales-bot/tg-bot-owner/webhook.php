@@ -7,6 +7,7 @@ require_once __DIR__ . '/../shared/telegram.php';
 require_once __DIR__ . '/../shared/xlsx_reader.php';
 require_once __DIR__ . '/../shared/x2pos_import.php';
 require_once __DIR__ . '/../shared/x2pos_api.php';
+require_once __DIR__ . '/../shared/kaspi_api.php';
 require_once __DIR__ . '/../shared/reports.php';
 
 $update = json_decode(file_get_contents('php://input'), true);
@@ -189,7 +190,8 @@ function route_callback(int $chatId, int $messageId, string $callbackQueryId, st
             break;
 
         case 'update':
-            edit($chatId, $messageId, "TODO: запуск синхронизации с Kaspi API (раздел 5 план реализации ТЗ, шаг 5).", [back_row()]);
+            edit($chatId, $messageId, "⏳ Синхронизируюсь с Kaspi...", []);
+            reply($chatId, kaspi_run_full_sync($pdo));
             break;
 
         case 'x2pos_sync':
@@ -222,7 +224,8 @@ function route_command(int $chatId, string $text): void {
             break;
 
         case '/обновить':
-            reply($chatId, "TODO: запуск синхронизации с Kaspi API (раздел 5 план реализации ТЗ, шаг 5).");
+            reply($chatId, "⏳ Синхронизируюсь с Kaspi...");
+            reply($chatId, kaspi_run_full_sync(get_db()));
             break;
 
         case '/синк_x2pos':
