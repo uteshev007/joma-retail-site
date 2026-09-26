@@ -13,7 +13,6 @@ function x2pos_api_auth(): string {
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
 
     $data = json_decode((string) $response, true);
     if ($httpCode !== 200 || !isset($data['token'])) {
@@ -36,7 +35,6 @@ function x2pos_api_get(string $endpoint, string $token, array $params = []): arr
     ]);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
 
     if ($httpCode !== 200) {
         throw new RuntimeException("X2POS GET $endpoint failed: HTTP $httpCode, ответ: " . substr((string) $response, 0, 300));
@@ -57,20 +55,13 @@ function x2pos_log_sync(PDO $pdo, string $source, string $status, string $detail
     $stmt->execute([':source' => $source, ':status' => $status, ':details' => $details, ':now' => date('Y-m-d H:i:s')]);
 }
 
-// Категории → карту [x2pos_category_id => name], используется при синке
-// товаров (products.category должен остаться совместим с category_hierarchy.php,
-// где ключи — русские названия категорий, так же как приходили из файла
-// "Номенклатура"; здесь то же самое имя, просто из API вместо Excel).
-function x2pos_sync_categories(PDO $pdo, string $token): array {
-    $categories = x2pos_api_get('/categories', $token, ['branch_id' => 'all']);
-    $map = [];
-    foreach ($categories as $c) {
-        if (($c['is_deleted'] ?? '0') === '1') {
-            continue;
-        }
-        $map[$c['id']] = $c['name'];
-    }
-    return $map;
+// Проверено на реальном аккаунте: /products и /procurements учитывают
+// параметр page корректно (разные записи на разных страницах), а
+// /customers — нет, всегда отдаёт всё целиком на любой странице (page=1 и
+// page=2 вернули одинаковые 555 записей). Без этой защиты цикл "пока
+// страница непустая" уходил бы в бесконечность на таких эндпоинтах.
+function x2pos_ids_signature(array $rows, string $idField): string {
+    return implode(',', array_map(fn($r) => (string) ($r[$idField] ?? ''), $rows));
 }
 
 // Товары+разновидности → products/stock. Артикул берём из vendor_code (той
@@ -78,8 +69,16 @@ function x2pos_sync_categories(PDO $pdo, string $token): array {
 // у разновидности, если пусто — у товара целиком; так сохраняется
 // совместимость с уже накопленной историей продаж, которая ключуется по
 // этим же строковым артикулам, а не по числовым product_id/variation_id
-// из API (те новые и ни на что в старых данных не сослались бы).
-function x2pos_sync_products(PDO $pdo, string $token, array $categoryMap): array {
+// из API (те новые и ни на что в старых данных не сослались бы). На реальном
+// аккаунте у товара product_vendor_code почти всегда пусто — код лежит в
+// variation.vendor_code.
+//
+// Категория берётся из product['category_name'] напрямую, а не через
+// отдельный /categories — тот на этом аккаунте отдаёт только 5 родительских
+// категорий (Обувь/Одежда/...), тогда как у товаров category_id гранулярнее
+// ("аптечка", "манишка" и т.п. — те же самые плоские категории, что и в
+// файловом импорте) и в /categories не находится вовсе.
+function x2pos_sync_products(PDO $pdo, string $token): array {
     $since = x2pos_last_sync($pdo, 'x2pos_api_products');
     $params = ['branch_id' => 'all'];
     if ($since !== null) {
@@ -106,13 +105,20 @@ function x2pos_sync_products(PDO $pdo, string $token, array $categoryMap): array
     $variationToArticleSize = []; // variation_id => [article, size], нужно для синка остатков следом
     $page = 1;
     $productCount = 0;
+    $firstPageSignature = null;
 
     do {
         $params['page'] = $page;
         $products = x2pos_api_get('/products', $token, $params);
+        $signature = x2pos_ids_signature($products, 'product_id');
+        if ($page > 1 && $signature !== '' && $signature === $firstPageSignature) {
+            break;
+        }
+        $firstPageSignature ??= $signature;
+
         foreach ($products as $p) {
             $productArticle = trim((string) ($p['product_vendor_code'] ?? ''));
-            $categoryName = $categoryMap[$p['category_id']] ?? null;
+            $categoryName = $p['category_name'] ?: null;
 
             foreach ($p['variations'] ?? [] as $v) {
                 $article = trim((string) ($v['vendor_code'] ?? '')) ?: $productArticle;
@@ -191,9 +197,16 @@ function x2pos_sync_customers(PDO $pdo, string $token): int {
 
     $page = 1;
     $count = 0;
+    $firstPageSignature = null;
     do {
         $params['page'] = $page;
         $customers = x2pos_api_get('/customers', $token, $params);
+        $signature = x2pos_ids_signature($customers, 'id');
+        if ($page > 1 && $signature !== '' && $signature === $firstPageSignature) {
+            break;
+        }
+        $firstPageSignature ??= $signature;
+
         foreach ($customers as $c) {
             if (($c['is_supplier'] ?? '0') === '1') {
                 continue;
@@ -274,10 +287,17 @@ function x2pos_sync_procurement_costs(PDO $pdo, string $token, array $variationT
     $latestByArticle = []; // article => [date, cost] — берём самую свежую приёмку
 
     $page = 1;
+    $firstPageSignature = null;
     do {
         $params['page'] = $page;
         $result = x2pos_api_get('/procurements', $token, $params);
         $procurements = $result['procurements'] ?? [];
+        $signature = x2pos_ids_signature($procurements, 'id');
+        if ($page > 1 && $signature !== '' && $signature === $firstPageSignature) {
+            break;
+        }
+        $firstPageSignature ??= $signature;
+
         foreach ($procurements as $doc) {
             foreach ($doc['procurement_items'] ?? [] as $item) {
                 if (($item['is_deleted'] ?? '0') === '1') {
@@ -320,8 +340,7 @@ function x2pos_run_full_sync(PDO $pdo): string {
         $branches = x2pos_api_get('/company_settings', $token);
         $branchIds = array_keys($branches[0]['branches'] ?? []);
 
-        $categoryMap = x2pos_sync_categories($pdo, $token);
-        $variationMap = x2pos_sync_products($pdo, $token, $categoryMap);
+        $variationMap = x2pos_sync_products($pdo, $token);
         $stockCount = x2pos_sync_stock($pdo, $token, $variationMap, $branchIds);
         $customerCount = x2pos_sync_customers($pdo, $token);
         $paymentCount = x2pos_sync_payments($pdo, $token);
