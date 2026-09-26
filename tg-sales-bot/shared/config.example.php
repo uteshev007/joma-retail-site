@@ -15,6 +15,13 @@ define('OWNER_CHAT_IDS', [
 define('KASPI_API_TOKEN', 'ЗАМЕНИТЬ_KASPI_TOKEN');
 define('KASPI_API_BASE', 'https://kaspi.kz/shop/api/v2');
 
+// --- X2POS API (v1.6) — товары/категории/остатки/клиенты/платежи/приёмки.
+// Продажи (чеки) API не отдаёт (нет метода чтения истории) — они по-прежнему
+// загружаются файлом через Telegram, см. scripts/import_x2pos.php.
+define('X2POS_API_LOGIN', 'ЗАМЕНИТЬ_ПОЧТУ_X2POS');
+define('X2POS_API_PASSWORD', 'ЗАМЕНИТЬ_ПАРОЛЬ_X2POS');
+define('X2POS_API_BASE', 'https://x2pos.com/api');
+
 // --- Claude API (распознавание текста продавцов) ---
 define('CLAUDE_API_KEY', 'ЗАМЕНИТЬ_CLAUDE_API_KEY');
 define('CLAUDE_MODEL', 'claude-haiku-4-5-20251001');

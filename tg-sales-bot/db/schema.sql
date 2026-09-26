@@ -12,7 +12,11 @@ CREATE TABLE IF NOT EXISTS products (
     retail_price REAL,
     discount_price REAL,
     price_updated_at TEXT,
-    updated_at TEXT
+    updated_at TEXT,
+    -- Заполняются синком с X2POS API (shared/x2pos_api.php) — надёжная связка
+    -- вместо сопоставления по article/size текстом при повторных синках.
+    x2pos_product_id TEXT,
+    x2pos_category_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS stock (
@@ -20,6 +24,7 @@ CREATE TABLE IF NOT EXISTS stock (
     size TEXT,
     qty_on_hand INTEGER,
     updated_at TEXT,
+    x2pos_variation_id TEXT,
     PRIMARY KEY (article, size)
 );
 

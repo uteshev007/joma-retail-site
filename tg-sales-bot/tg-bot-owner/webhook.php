@@ -6,6 +6,7 @@ require_once __DIR__ . '/../shared/db.php';
 require_once __DIR__ . '/../shared/telegram.php';
 require_once __DIR__ . '/../shared/xlsx_reader.php';
 require_once __DIR__ . '/../shared/x2pos_import.php';
+require_once __DIR__ . '/../shared/x2pos_api.php';
 require_once __DIR__ . '/../shared/reports.php';
 
 $update = json_decode(file_get_contents('php://input'), true);
@@ -56,7 +57,7 @@ function main_menu_keyboard(): array {
         [['⏳ Сток', 'm:stock'], ['💰 Маржа', 'm:margin']],
         [['👥 Клиенты', 'm:clients'], ['🔗 Связки', 'm:basket']],
         [['📈 Тренд', 'm:trend'], ['🏷 Цены конкурентов', 'm:competitors']],
-        [['🔄 Обновить из Kaspi', 'm:update']],
+        [['🔄 Синк с X2POS', 'm:x2pos_sync'], ['🔄 Обновить из Kaspi', 'm:update']],
     ];
 }
 
@@ -191,6 +192,11 @@ function route_callback(int $chatId, int $messageId, string $callbackQueryId, st
             edit($chatId, $messageId, "TODO: запуск синхронизации с Kaspi API (раздел 5 план реализации ТЗ, шаг 5).", [back_row()]);
             break;
 
+        case 'x2pos_sync':
+            edit($chatId, $messageId, "⏳ Синхронизируюсь с X2POS API...", []);
+            reply($chatId, x2pos_run_full_sync($pdo));
+            break;
+
         default:
             edit($chatId, $messageId, "Неизвестная кнопка.", [back_row()]);
     }
@@ -217,6 +223,11 @@ function route_command(int $chatId, string $text): void {
 
         case '/обновить':
             reply($chatId, "TODO: запуск синхронизации с Kaspi API (раздел 5 план реализации ТЗ, шаг 5).");
+            break;
+
+        case '/синк_x2pos':
+            reply($chatId, "⏳ Синхронизируюсь с X2POS API...");
+            reply($chatId, x2pos_run_full_sync(get_db()));
             break;
 
         case '/дашборд':
