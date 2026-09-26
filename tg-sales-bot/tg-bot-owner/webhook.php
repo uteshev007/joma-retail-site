@@ -49,6 +49,7 @@ exit;
 // короткие коды ("m:report"), не текст команд — у Telegram лимит 64 байта.
 function main_menu_keyboard(): array {
     return [
+        [['📊 Дашборд', 'm:dashboard']],
         [['💡 Где теряю продажи', 'm:growth']],
         [['📊 Отчёт', 'm:report'], ['📦 Размеры', 'm:sizes']],
         [['🏆 ABC', 'm:abc'], ['📉 Аутсайдеры', 'm:outliers']],
@@ -129,6 +130,13 @@ function route_callback(int $chatId, int $messageId, string $callbackQueryId, st
     $page = isset($parts[2]) ? (int) $parts[2] : 1;
 
     switch ($code) {
+        case 'dashboard':
+            edit($chatId, $messageId, report_dashboard($pdo, 7), [
+                [['💡 Где теряю продажи', 'p:growth:30']],
+                back_row(),
+            ]);
+            break;
+
         case 'report':
             edit($chatId, $messageId, report_summary($pdo), [back_row()]);
             break;
@@ -209,6 +217,10 @@ function route_command(int $chatId, string $text): void {
 
         case '/обновить':
             reply($chatId, "TODO: запуск синхронизации с Kaspi API (раздел 5 план реализации ТЗ, шаг 5).");
+            break;
+
+        case '/дашборд':
+            reply($chatId, report_dashboard(get_db(), 7));
             break;
 
         case '/отчёт':

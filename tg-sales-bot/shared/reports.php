@@ -872,17 +872,11 @@ function report_customers(PDO $pdo, int $page = 1): array {
     return ['text' => implode("\n", $lines), 'page' => $page, 'total_pages' => $totalPages];
 }
 
-// Сводный диагностический отчёт "где теряю продажи" — собирает сигналы из
-// всех остальных отчётов в одну картину и даёт конкретные рекомендации по
-// каждому найденному случаю, а не общие советы. Демо-сигналы от продавцов
-// (demand_signals) и цены конкурентов (competitor_prices) сюда не входят —
-// эти таблицы пока пустые (боты для них не подключены), добавить туда же,
-// когда появятся данные.
-function report_growth_opportunities(PDO $pdo, int $days = 30): string {
-    if ((int) $pdo->query('SELECT COUNT(*) FROM sales')->fetchColumn() === 0) {
-        return report_needs_sales_data('/точки_роста');
-    }
-
+// Считает всё то же, что раньше делал report_growth_opportunities целиком —
+// вынесено отдельно, чтобы /дашборд мог показать те же находки компактно
+// (счётчики + топ-1 по каждому пункту), не пересчитывая всё заново своей
+// отдельной логикой, которая рано или поздно разошлась бы с /точки_роста.
+function compute_growth_opportunities(PDO $pdo, int $days): array {
     $articles = compute_abc_xyz($pdo, $days);
     // Разовая оптовая партия не делает товар хитом (см. is_wholesale_spike в
     // compute_abc_xyz) — без этого фильтра товар, который не продавался
@@ -900,8 +894,6 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
         $stockByArticle[$r['article']] = (int) $r['qty'];
     }
 
-    $lines = ["💡 <b>Где вы теряете продажи</b>", "<i>за $days дней, по хитам (A/B-класс, 95% выручки)</i>"];
-
     // 1. Хиты, которых прямо сейчас нет в наличии — доказанный спрос, товара нет.
     $stockouts = [];
     foreach ($topByArticle as $article => $a) {
@@ -910,17 +902,6 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
         }
     }
     usort($stockouts, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
-
-    $lines[] = "";
-    $lines[] = "🚫 <b>1. Хиты без остатка прямо сейчас</b>";
-    if (empty($stockouts)) {
-        $lines[] = "нет — все ваши топ-продавцы в наличии";
-    } else {
-        foreach (array_slice($stockouts, 0, 5) as $a) {
-            $name = $a['name'] ?: $a['article'];
-            $lines[] = sprintf("• %s (%s) — продано %d шт. на <code>%s</code>, сейчас 0 шт.", $name, $a['article'], $a['qty'], fmt_money($a['revenue']));
-        }
-    }
 
     // 2. Хиты, которые скоро закончатся (но пока есть).
     $forecast = compute_stock_forecast($pdo, null, 8);
@@ -931,16 +912,6 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
         }
     }
     usort($soonOut, fn($a, $b) => $a['days_to_zero'] <=> $b['days_to_zero']);
-
-    $lines[] = "";
-    $lines[] = "⏳ <b>2. Хиты, которые скоро закончатся</b> (&lt;15 дней)";
-    if (empty($soonOut)) {
-        $lines[] = "нет — по текущей скорости запаса хватит";
-    } else {
-        foreach (array_slice($soonOut, 0, 5) as $f) {
-            $lines[] = sprintf("• %s (%s) — <code>%d шт.</code>, ~%.0f дн. до нуля", $f['name'], $f['article'], $f['stock'], $f['days_to_zero']);
-        }
-    }
 
     // 3. Дефицит конкретного размера у хита (остальные размеры есть, этого нет).
     $since = date('Y-m-d', strtotime("-$days days"));
@@ -967,16 +938,6 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
     }
     usort($sizeDeficits, fn($a, $b) => $b['sold'] <=> $a['sold']);
 
-    $lines[] = "";
-    $lines[] = "📏 <b>3. Дефицит размера у хита</b> (остальные размеры есть)";
-    if (empty($sizeDeficits)) {
-        $lines[] = "нет — размерный ряд хитов не перекошен";
-    } else {
-        foreach (array_slice($sizeDeficits, 0, 5) as $d) {
-            $lines[] = sprintf("• %s (%s), размер %s — продано %d шт. за период, сейчас 0", $d['name'], $d['article'], $d['size'], $d['sold']);
-        }
-    }
-
     // 4. Дорогие клиенты в оттоке — уже посчитано в report_customers, переиспользуем логику.
     $churn = $pdo->query(
         "SELECT name, phone, ltv, last_purchase_at, avg_purchase_interval_days,
@@ -987,17 +948,6 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
            AND ltv > 0
          ORDER BY ltv DESC LIMIT 5"
     )->fetchAll(PDO::FETCH_ASSOC);
-
-    $lines[] = "";
-    $lines[] = "👤 <b>4. Дорогие клиенты в оттоке</b>";
-    if (empty($churn)) {
-        $lines[] = "нет — клиенты с высоким LTV покупают в своём обычном ритме";
-    } else {
-        foreach ($churn as $c) {
-            $name = $c['name'] ?: $c['phone'];
-            $lines[] = sprintf("• %s — LTV <code>%s</code>, %d дн. без покупок (обычно раз в %.0f)", $name, fmt_money($c['ltv']), $c['days_since'], $c['avg_purchase_interval_days']);
-        }
-    }
 
     // 5. Мёртвый капитал: C-класс (5% выручки) с деньгами, замороженными на полке.
     $costByArticle = [];
@@ -1016,16 +966,6 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
         }
     }
     usort($frozen, fn($a, $b) => $b['value'] <=> $a['value']);
-
-    $lines[] = "";
-    $lines[] = "🧊 <b>5. Мёртвый капитал</b> (аутсайдеры, лежат на полке)";
-    if (empty($frozen)) {
-        $lines[] = "нет — в аутсайдерах не заморожено значимых денег";
-    } else {
-        foreach (array_slice($frozen, 0, 5) as $f) {
-            $lines[] = sprintf("• %s (%s) — %d шт. заморожено на <code>%s</code> (по себестоимости)", $f['name'], $f['article'], $f['qty'], fmt_money($f['value']));
-        }
-    }
 
     // 6. Категории с маржой заметно ниже среднего по каталогу — возможно, скидки съедают прибыль.
     $catMargin = $pdo->prepare(
@@ -1051,6 +991,170 @@ function report_growth_opportunities(PDO $pdo, int $days = 30): string {
         }
     }
     usort($weak, fn($a, $b) => $a['pct'] <=> $b['pct']);
+
+    return [
+        'stockouts' => $stockouts,
+        'soon_out' => $soonOut,
+        'size_deficits' => $sizeDeficits,
+        'churn' => $churn,
+        'frozen' => $frozen,
+        'weak_margin' => $weak,
+        'avg_margin_pct' => $avgPct,
+        'wholesale_spikes' => array_values($wholesaleSpikes),
+    ];
+}
+
+// Дашборд — отдельная кнопка в меню (не замена /start): самое важное на
+// одном экране, без деталей — цифры + счётчики находок из
+// compute_growth_opportunities, дальше кнопка "Подробнее" ведёт в
+// /точки_роста за полным разбором.
+function report_dashboard(PDO $pdo, int $days = 7): string {
+    $productCount = (int) $pdo->query('SELECT COUNT(*) FROM products')->fetchColumn();
+    $totalStock = (int) $pdo->query('SELECT COALESCE(SUM(qty_on_hand), 0) FROM stock')->fetchColumn();
+    $customerCount = (int) $pdo->query('SELECT COUNT(*) FROM customers')->fetchColumn();
+    $zeroStock = (int) $pdo->query(
+        'SELECT COUNT(DISTINCT p.article) FROM products p
+         LEFT JOIN stock s ON s.article = p.article
+         GROUP BY p.article
+         HAVING COALESCE(SUM(s.qty_on_hand), 0) = 0'
+    )->fetchColumn();
+
+    $salesCount = (int) $pdo->query('SELECT COUNT(*) FROM sales')->fetchColumn();
+
+    $lines = ["📊 <b>Дашборд</b>"];
+
+    if ($salesCount === 0) {
+        $lines[] = "";
+        $lines[] = "📦 Товаров: <code>$productCount</code>, остаток: <code>$totalStock шт.</code>";
+        $lines[] = "👥 Покупателей: <code>$customerCount</code>";
+        $lines[] = "";
+        $lines[] = "⚠️ Продажи не импортированы — выручка и находки по потерям недоступны. Загрузите выгрузку X2POS «Продажи по товарам».";
+        return implode("\n", $lines);
+    }
+
+    $since = date('Y-m-d', strtotime("-$days days"));
+    $stmt = $pdo->prepare("SELECT COALESCE(SUM(total_amount), 0) AS revenue FROM sales WHERE sale_date >= :since");
+    $stmt->execute([':since' => $since]);
+    $revenue = (float) $stmt->fetchColumn();
+
+    $lines[] = "";
+    $lines[] = "💰 Выручка за $days дней: <code>" . fmt_money($revenue) . "</code>";
+    $lines[] = "📦 Остаток: <code>$totalStock шт.</code> ($zeroStock товаров с нулевым остатком)";
+    $lines[] = "👥 Покупателей: <code>$customerCount</code>";
+
+    // Находки по потерям считаем на 30 днях (как в /точки_роста), а не на
+    // $days от выручки — при коротком окне почти нечему попасть в A/B-класс
+    // хитов при небольшом объёме продаж, и блок "Требует внимания" был бы
+    // почти всегда пустым без реальной причины.
+    $g = compute_growth_opportunities($pdo, 30);
+
+    $lines[] = "";
+    $lines[] = "🚨 <b>Требует внимания</b>";
+    $alertCount = 0;
+    if (!empty($g['stockouts'])) {
+        $top = $g['stockouts'][0];
+        $lines[] = sprintf("🚫 %d хитов без остатка — топ: %s", count($g['stockouts']), $top['name'] ?: $top['article']);
+        $alertCount++;
+    }
+    if (!empty($g['soon_out'])) {
+        $lines[] = sprintf("⏳ %d скоро закончатся (&lt;15 дн.)", count($g['soon_out']));
+        $alertCount++;
+    }
+    if (!empty($g['size_deficits'])) {
+        $lines[] = sprintf("📏 %d дефицитов размера у хитов", count($g['size_deficits']));
+        $alertCount++;
+    }
+    if (!empty($g['churn'])) {
+        $lines[] = sprintf("👤 %d дорогих клиентов в оттоке", count($g['churn']));
+        $alertCount++;
+    }
+    if (!empty($g['frozen'])) {
+        $sumFrozen = array_sum(array_column($g['frozen'], 'value'));
+        $lines[] = sprintf("🧊 ~%s заморожено в аутсайдерах", fmt_money($sumFrozen));
+        $alertCount++;
+    }
+    if (!empty($g['weak_margin'])) {
+        $lines[] = sprintf("📉 %d категорий с маржой ниже среднего", count($g['weak_margin']));
+        $alertCount++;
+    }
+    if ($alertCount === 0) {
+        $lines[] = "нет — по текущим данным явных проблем не видно";
+    }
+
+    $lines[] = "";
+    $lines[] = "<i>Подробности и рекомендации — кнопка «Где теряю продажи» ниже.</i>";
+
+    return implode("\n", $lines);
+}
+
+// Сводный диагностический отчёт "где теряю продажи" — полная версия с
+// разбором и рекомендациями по каждому пункту. Демо-сигналы от продавцов
+// (demand_signals) и цены конкурентов (competitor_prices) сюда не входят —
+// эти таблицы пока пустые (боты для них не подключены), добавить туда же,
+// когда появятся данные.
+function report_growth_opportunities(PDO $pdo, int $days = 30): string {
+    if ((int) $pdo->query('SELECT COUNT(*) FROM sales')->fetchColumn() === 0) {
+        return report_needs_sales_data('/точки_роста');
+    }
+
+    $g = compute_growth_opportunities($pdo, $days);
+    ['stockouts' => $stockouts, 'soon_out' => $soonOut, 'size_deficits' => $sizeDeficits,
+     'churn' => $churn, 'frozen' => $frozen, 'weak_margin' => $weak,
+     'avg_margin_pct' => $avgPct, 'wholesale_spikes' => $wholesaleSpikes] = $g;
+
+    $lines = ["💡 <b>Где вы теряете продажи</b>", "<i>за $days дней, по хитам (A/B-класс, 95% выручки)</i>"];
+
+    $lines[] = "";
+    $lines[] = "🚫 <b>1. Хиты без остатка прямо сейчас</b>";
+    if (empty($stockouts)) {
+        $lines[] = "нет — все ваши топ-продавцы в наличии";
+    } else {
+        foreach (array_slice($stockouts, 0, 5) as $a) {
+            $name = $a['name'] ?: $a['article'];
+            $lines[] = sprintf("• %s (%s) — продано %d шт. на <code>%s</code>, сейчас 0 шт.", $name, $a['article'], $a['qty'], fmt_money($a['revenue']));
+        }
+    }
+
+    $lines[] = "";
+    $lines[] = "⏳ <b>2. Хиты, которые скоро закончатся</b> (&lt;15 дней)";
+    if (empty($soonOut)) {
+        $lines[] = "нет — по текущей скорости запаса хватит";
+    } else {
+        foreach (array_slice($soonOut, 0, 5) as $f) {
+            $lines[] = sprintf("• %s (%s) — <code>%d шт.</code>, ~%.0f дн. до нуля", $f['name'], $f['article'], $f['stock'], $f['days_to_zero']);
+        }
+    }
+
+    $lines[] = "";
+    $lines[] = "📏 <b>3. Дефицит размера у хита</b> (остальные размеры есть)";
+    if (empty($sizeDeficits)) {
+        $lines[] = "нет — размерный ряд хитов не перекошен";
+    } else {
+        foreach (array_slice($sizeDeficits, 0, 5) as $d) {
+            $lines[] = sprintf("• %s (%s), размер %s — продано %d шт. за период, сейчас 0", $d['name'], $d['article'], $d['size'], $d['sold']);
+        }
+    }
+
+    $lines[] = "";
+    $lines[] = "👤 <b>4. Дорогие клиенты в оттоке</b>";
+    if (empty($churn)) {
+        $lines[] = "нет — клиенты с высоким LTV покупают в своём обычном ритме";
+    } else {
+        foreach ($churn as $c) {
+            $name = $c['name'] ?: $c['phone'];
+            $lines[] = sprintf("• %s — LTV <code>%s</code>, %d дн. без покупок (обычно раз в %.0f)", $name, fmt_money($c['ltv']), $c['days_since'], $c['avg_purchase_interval_days']);
+        }
+    }
+
+    $lines[] = "";
+    $lines[] = "🧊 <b>5. Мёртвый капитал</b> (аутсайдеры, лежат на полке)";
+    if (empty($frozen)) {
+        $lines[] = "нет — в аутсайдерах не заморожено значимых денег";
+    } else {
+        foreach (array_slice($frozen, 0, 5) as $f) {
+            $lines[] = sprintf("• %s (%s) — %d шт. заморожено на <code>%s</code> (по себестоимости)", $f['name'], $f['article'], $f['qty'], fmt_money($f['value']));
+        }
+    }
 
     $lines[] = "";
     $lines[] = sprintf("📉 <b>6. Маржа заметно ниже среднего</b> (средняя по каталогу %.0f%%)", $avgPct);
