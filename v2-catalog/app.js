@@ -18,13 +18,77 @@ function closeCart() {
 document.getElementById('cartIconBtn')?.addEventListener('click', openCart);
 document.getElementById('cartClose')?.addEventListener('click', closeCart);
 cartOverlay?.addEventListener('click', closeCart);
-document.getElementById('cartSubmitBtn')?.addEventListener('click', () => {
-  if (typeof JomaCart !== 'undefined') JomaCart.submitViaWhatsApp();
-});
 window.addEventListener('jomacart:change', () => {
   if (typeof JomaCart !== 'undefined') JomaCart.renderPanel();
 });
 if (typeof JomaCart !== 'undefined') JomaCart.renderPanel();
+
+// Submit flow: validate phone client-side (cheap, friendly), then hand off
+// to JomaCart.submitLead which posts to our own api/lead.php (secret stays
+// server-side there). On failure, surface the error and reveal the
+// WhatsApp link as a fallback instead of leaving the visitor stuck.
+const submitBtn = document.getElementById('cartSubmitBtn');
+const cartError = document.getElementById('cartError');
+const cartWaFallback = document.getElementById('cartWaFallback');
+const cartWaLink = document.getElementById('cartWaLink');
+
+function showCartError(message) {
+  if (!cartError) return;
+  cartError.textContent = message;
+  cartError.hidden = false;
+}
+function hideCartError() {
+  if (cartError) cartError.hidden = true;
+}
+
+submitBtn?.addEventListener('click', async () => {
+  if (typeof JomaCart === 'undefined') return;
+  hideCartError();
+  if (cartWaFallback) cartWaFallback.hidden = true;
+
+  const phoneInput = document.getElementById('cartPhone');
+  const nameInput = document.getElementById('cartName');
+  const phone = phoneInput ? phoneInput.value.trim() : '';
+  const digits = phone.replace(/\D/g, '');
+
+  if (digits.length < 10) {
+    showCartError('Укажите номер телефона для связи.');
+    phoneInput?.focus();
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.classList.add('is-loading');
+  const originalLabel = submitBtn.textContent;
+  submitBtn.textContent = 'Отправляем…';
+
+  const result = await JomaCart.submitLead(phone, nameInput ? nameInput.value.trim() : '');
+
+  submitBtn.classList.remove('is-loading');
+  submitBtn.textContent = originalLabel;
+
+  if (result.ok) {
+    JomaCart.clear();
+    const body = document.getElementById('cartBody');
+    if (body) {
+      body.innerHTML = '<p class="cart-success">Спасибо! Заявка отправлена — менеджер свяжется с вами в ближайшее время.</p>';
+    }
+    const summary = document.getElementById('cartSummary');
+    if (summary) summary.hidden = true;
+    submitBtn.hidden = true;
+  } else {
+    submitBtn.disabled = false;
+    const messages = {
+      invalid_phone: 'Проверьте номер телефона — похоже, в нём ошибка.',
+      empty_cart: 'Корзина пуста.',
+    };
+    showCartError(messages[result.error] || 'Не получилось отправить заявку. Попробуйте ещё раз или напишите нам в WhatsApp.');
+    if (cartWaFallback && cartWaLink) {
+      cartWaLink.href = JomaCart.whatsAppHref();
+      cartWaFallback.hidden = false;
+    }
+  }
+});
 
 // Only the category index page has a capped, single-screen ring grid
 // (14 categories fit on one screen); the per-category product grid uses

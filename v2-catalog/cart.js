@@ -1,8 +1,8 @@
-// Client-side cart for the v2 catalog — localStorage only, no server state
-// yet (the CRM's POST /api/lead integration needs a shared secret that
-// isn't provisioned on this side yet; see README). Submission for now goes
-// through WhatsApp with a prefilled message, same as the original v2
-// prototype's own "Отправить набор в WhatsApp" design.
+// Client-side cart for the v2 catalog — localStorage only (no server-side
+// session). Submission posts to our own api/lead.php, which signs the
+// request server-side and forwards it to the CRM (раздел 12.1 ТЗ CRM) —
+// the shared secret never reaches this client-side code. WhatsApp is kept
+// as a visible fallback link if that submission fails for any reason.
 //
 // Separate from the old site's root-level cart.js (different storage key,
 // different data shape) — these are two different catalogs until the old
@@ -123,7 +123,13 @@ const JomaCart = (() => {
     }
 
     if (summary) summary.hidden = false;
-    if (submitBtn) submitBtn.disabled = false;
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      // Un-hide in case a previous successful submission hid it (see
+      // app.js's post-submit handling) — a fresh add-to-cart after that
+      // should bring the button back.
+      submitBtn.hidden = false;
+    }
 
     body.innerHTML = groups
       .map((g) => {
@@ -185,5 +191,65 @@ const JomaCart = (() => {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
   }
 
-  return { addLine, setQty, removeLine, clear, totalCount, totalSum, renderPanel, submitViaWhatsApp, getLineQty };
+  function whatsAppHref() {
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildWhatsAppMessage())}`;
+  }
+
+  // CRM's /api/lead only wants category + total qty per category (it
+  // builds the actual брифф/подборку from its own catalog data, not from
+  // whatever the visitor's browser thinks the price was) — not the full
+  // per-size/per-color breakdown the cart panel shows.
+  function categoryTotals() {
+    const lines = read();
+    const byCategory = new Map();
+    for (const l of lines) {
+      byCategory.set(l.category, (byCategory.get(l.category) || 0) + l.qty);
+    }
+    return Array.from(byCategory.entries()).map(([category, qty]) => ({ category, qty }));
+  }
+
+  /**
+   * Submits the lead. Returns a Promise resolving to
+   * {ok: true} or {ok: false, error: string} — never rejects, so the
+   * caller doesn't need its own try/catch for the network-failure case.
+   */
+  async function submitLead(phone, name) {
+    const cart = categoryTotals();
+    if (cart.length === 0) {
+      return { ok: false, error: 'empty_cart' };
+    }
+    const payload = {
+      phone,
+      name: name || null,
+      cart,
+      utm: null,
+      fbp: readCookie('_fbp'),
+      fbc: readCookie('_fbc'),
+      page: window.location.href,
+    };
+    try {
+      const res = await fetch('api/lead.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data || data.ok === false) {
+        return { ok: false, error: (data && data.error) || 'request_failed' };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'network_error' };
+    }
+  }
+
+  function readCookie(name) {
+    const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return match ? decodeURIComponent(match[1]) : null;
+  }
+
+  return {
+    addLine, setQty, removeLine, clear, totalCount, totalSum, renderPanel,
+    submitViaWhatsApp, getLineQty, submitLead, whatsAppHref,
+  };
 })();

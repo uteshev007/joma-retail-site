@@ -18,11 +18,21 @@
     <button class="cart-panel-close" id="cartClose" aria-label="Закрыть">×</button>
   </div>
   <div id="cartBody"><p class="cart-empty">Пока пусто — добавьте товары из каталога.</p></div>
+  <label class="cart-team-field">Телефон для связи
+    <input type="tel" id="cartPhone" placeholder="+7 777 123 45 67" autocomplete="tel">
+  </label>
+  <label class="cart-team-field">Имя (необязательно)
+    <input type="text" id="cartName" placeholder="Как к вам обращаться" autocomplete="name">
+  </label>
   <label class="cart-team-field">Название команды / клуба (необязательно)
     <input type="text" id="cartTeamName" placeholder="Например, FC Astana Junior">
   </label>
+  <p class="cart-error" id="cartError" hidden></p>
   <div class="cart-summary" id="cartSummary" hidden><span class="label">Итого</span><span class="value">0 ₸</span></div>
-  <button class="cart-submit" id="cartSubmitBtn" disabled>Отправить заявку в WhatsApp →</button>
+  <button class="cart-submit" id="cartSubmitBtn" disabled>Отправить заявку</button>
+  <p class="cart-wa-fallback" id="cartWaFallback" hidden>
+    Не отправилось — <a href="#" id="cartWaLink">напишите нам в WhatsApp</a> напрямую.
+  </p>
 </div>
 
 <script src="cart.js"></script>
