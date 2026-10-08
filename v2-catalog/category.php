@@ -121,7 +121,7 @@ uksort($bySub, function ($a, $b) use ($bySub) {
 // "воздуха". Показываем пол отдельными секциями только когда минимум 2
 // группы набирают приличное количество моделей каждая — иначе плоский
 // список (пол тогда виден прямо в подписи карточки).
-const MIN_MODELS_PER_GENDER_BUCKET = 3;
+const MIN_MODELS_PER_GENDER_BUCKET = 2;
 foreach ($bySub as $subKey => &$subGroup) {
     $meaningfulBuckets = count(array_filter(
         $subGroup['genders'],
