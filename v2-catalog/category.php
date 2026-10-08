@@ -7,6 +7,7 @@ $config = require __DIR__ . '/config.php';
 $client = new V2Catalog\CatalogClient($config);
 
 $categoryName = $_GET['name'] ?? '';
+$subParam = $_GET['sub'] ?? null;
 $items = $categoryName !== '' ? $client->getItemsByCategory($categoryName) : [];
 
 function h(string $s): string
@@ -45,22 +46,9 @@ function totalStock(array $item): int
     return $total;
 }
 
-// Группируем по model_number — одна карточка на модель, а не на каждый цвет
-// отдельно (иначе "Футболки" превращаются в 729 почти одинаковых плиток).
-$byModel = [];
-foreach ($items as $item) {
-    $key = $item['model_number'] ?: $item['article'];
-    if (!isset($byModel[$key])) {
-        $byModel[$key] = ['base' => $item, 'colorCount' => 0];
-    }
-    $byModel[$key]['colorCount']++;
-}
-$models = array_values($byModel);
-
 /**
  * CRM присылает group как "мужская"/"Мужская"/"женская"/null вперемешку
- * (регистр не нормализован на их стороне) — приводим к одному виду и
- * раскладываем по секциям, вместо плоской свалки мужского/женского вместе.
+ * (регистр не нормализован на их стороне) — приводим к одному виду.
  */
 function normalizeGroup(?string $group): string
 {
@@ -74,6 +62,27 @@ function normalizeGroup(?string $group): string
     return 'унисекс';
 }
 
+function subModelCount(array $group): int
+{
+    $n = 0;
+    foreach ($group['genders'] as $models) {
+        $n += count($models);
+    }
+    return $n;
+}
+
+// Группируем по model_number — одна карточка на модель, а не на каждый цвет
+// отдельно (иначе "Футболки" превращаются в 729 почти одинаковых плиток).
+$byModel = [];
+foreach ($items as $item) {
+    $key = $item['model_number'] ?: $item['article'];
+    if (!isset($byModel[$key])) {
+        $byModel[$key] = ['base' => $item, 'colorCount' => 0];
+    }
+    $byModel[$key]['colorCount']++;
+}
+$models = array_values($byModel);
+
 $genderOrder = ['мужская' => 'Мужская', 'женская' => 'Женская', 'унисекс' => 'Унисекс'];
 
 /**
@@ -86,16 +95,14 @@ $genderOrder = ['мужская' => 'Мужская', 'женская' => 'Же�
 $bySub = [];
 foreach ($models as $m) {
     $sub = $m['base']['subcategory'] ?: null;
-    $bySub[$sub ?? '__none__']['title'] = $sub;
-    $bySub[$sub ?? '__none__']['genders'][normalizeGroup($m['base']['group'] ?? null)][] = $m;
-}
-function subModelCount(array $group): int
-{
-    $n = 0;
-    foreach ($group['genders'] as $models) {
-        $n += count($models);
+    $subKey = $sub ?? '__none__';
+    if (!isset($bySub[$subKey])) {
+        $bySub[$subKey] = ['title' => $sub, 'photo' => null, 'genders' => []];
     }
-    return $n;
+    if ($bySub[$subKey]['photo'] === null && !empty($m['base']['photo_path'])) {
+        $bySub[$subKey]['photo'] = $m['base']['photo_path'];
+    }
+    $bySub[$subKey]['genders'][normalizeGroup($m['base']['group'] ?? null)][] = $m;
 }
 
 // Подкатегории — в порядке убывания количества моделей, "без подкатегории"
@@ -110,9 +117,9 @@ uksort($bySub, function ($a, $b) use ($bySub) {
 // Деление по полу добавляет свой заголовок на каждую подгруппу — если
 // почти всё приходится на одну группу (например, 2 женских + 13 унисекс),
 // секция из 2 карточек не помогает ориентироваться, а только добавляет
-// "воздуха" и создаёт ощущение, что каталог внезапно разросся. Показываем
-// пол отдельными секциями только когда минимум 2 группы набирают приличное
-// количество моделей каждая — иначе один плоский список.
+// "воздуха". Показываем пол отдельными секциями только когда минимум 2
+// группы набирают приличное количество моделей каждая — иначе плоский
+// список (пол тогда виден прямо в подписи карточки).
 const MIN_MODELS_PER_GENDER_BUCKET = 3;
 foreach ($bySub as $subKey => &$subGroup) {
     $meaningfulBuckets = count(array_filter(
@@ -128,18 +135,31 @@ foreach ($bySub as $subKey => &$subGroup) {
     }
 }
 unset($subGroup);
+
+// Настоящих подкатегорий 2 и больше (не считая "без подкатегории", которой
+// в такой ситуации и не бывает) — показываем отдельный шаг выбора вместо
+// того, чтобы валить все подкатегории на одну длинную страницу. Категории
+// без подкатегорий (большинство) сразу показывают товары, как раньше.
+$realSubKeys = array_filter(array_keys($bySub), fn($k) => $k !== '__none__');
+$needsSubPicker = count($realSubKeys) >= 2 && $subParam === null;
+
+// Когда подкатегория выбрана (или её нет вовсе), работаем только с одной
+// веткой $bySub — либо явно запрошенной, либо единственной ('__none__').
+$activeSubKey = $subParam !== null ? $subParam : '__none__';
+$activeSub = $bySub[$activeSubKey] ?? null;
 ?><!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title><?= h($categoryName ?: 'Категория') ?> — Joma Teamwear</title>
+<title><?= h($subParam ?: $categoryName ?: 'Категория') ?> — Joma Teamwear</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 <style>
   /* Products page: real catalogs run from dozens to hundreds of items
-     (52–729 in this data), so unlike the category index's single-screen
-     ring layout, this is always a plain scrolling grid — on desktop too. */
+     (52–729 in this data), so unlike the ring layouts (category index,
+     subcategory picker), this is always a plain scrolling grid — on
+     desktop too. */
   .products-grid{
     flex:1;overflow-y:auto;display:grid;
     grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px 10px;
@@ -155,7 +175,8 @@ unset($subGroup);
      given product code (confirmed directly — valid-looking headers, broken
      pixel data) — the img's onerror strips the broken <img>, leaving this
      quiet placeholder instead of the browser's default broken-image icon. */
-  .product-photo.photo-missing::after{
+  .product-photo.photo-missing::after,
+  .ring-thumb.photo-missing::after{
     content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font:11px var(--mono);color:var(--muted);text-align:center;
   }
@@ -167,19 +188,13 @@ unset($subGroup);
   .product-meta{font:11px var(--mono);color:var(--muted);margin:0 0 4px}
   .product-price{font-size:14px;font-weight:700;margin:0}
   .empty-state{padding:6vh 5vw;color:var(--muted);text-align:center}
-  /* Two heading levels: a subcategory (e.g. "Футбол/Футзал" within "Игровая
-     форма") is a real content division, styled like a heading; gender is a
-     lighter sub-grouping nested under it (or under the page title directly,
-     for the many categories with no subcategory at all). */
-  .subcat-label{
-    margin:3vh 5vw 0;font:700 clamp(17px,2.2vh,22px) var(--display);
-  }
   .gender-label{
     display:flex;align-items:center;gap:10px;margin:1.6vh 5vw .8vh;
     font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
   }
   .gender-label::after{content:'';flex:1;height:1px;background:var(--line)}
   .gender-label .count{color:var(--muted);font-weight:400}
+  .sub-count{font:11px var(--mono);color:var(--muted);margin-top:2px}
 </style>
 </head>
 <body>
@@ -187,6 +202,37 @@ unset($subGroup);
 <?php include __DIR__ . '/partials/header.php'; ?>
 
 <main>
+<?php if ($needsSubPicker): ?>
+  <!-- Шаг выбора подкатегории — тот же паттерн колец, что и в каталоге,
+       вместо того чтобы сваливать все подкатегории на одну страницу. -->
+  <div class="page" data-page="catalog">
+    <div class="cat-showcase">
+      <div class="page-head">
+        <div class="page-head-top">
+          <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+          <h1><?= h($categoryName) ?></h1>
+        </div>
+        <p><?= count($realSubKeys) ?> <?= pluralRu(count($realSubKeys), 'подкатегория', 'подкатегории', 'подкатегорий') ?> · <?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?> всего.</p>
+      </div>
+      <div class="cat-main-row">
+        <div class="rings-col">
+          <div class="rings-grid">
+<?php foreach ($realSubKeys as $subKey): $sub = $bySub[$subKey]; ?>
+            <a class="ring-card" href="category.php?name=<?= urlencode($categoryName) ?>&sub=<?= urlencode($subKey) ?>">
+              <div class="ring-wrap">
+                <div class="ring-thumb"><img src="<?= h((string) $sub['photo']) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
+              </div>
+              <p class="ring-name"><?= h($subKey) ?></p>
+              <p class="sub-count"><?= subModelCount($sub) ?> <?= pluralRu(subModelCount($sub), 'модель', 'модели', 'моделей') ?></p>
+            </a>
+<?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<?php elseif ($activeSub === null): ?>
   <div class="page" data-page="products">
     <div class="cat-showcase">
       <div class="page-head">
@@ -194,19 +240,31 @@ unset($subGroup);
           <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($categoryName ?: 'Категория') ?></h1>
         </div>
-        <p><?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?> · цена указана оптовая, за единицу.</p>
       </div>
-<?php if (empty($models)): ?>
       <div class="empty-state">В этой категории пока нет товаров в выгрузке.</div>
+    </div>
+  </div>
+
 <?php else: ?>
-<?php foreach ($bySub as $subKey => $subGroup):
-        $hasSubcat = $subKey !== '__none__'; ?>
-<?php if ($hasSubcat): ?>
-      <h2 class="subcat-label"><?= h($subGroup['title']) ?></h2>
+  <!-- Товары выбранной подкатегории (или всей категории, когда
+       подкатегорий нет вовсе). Возврат идёт на шаг выбора подкатегории,
+       если он был, иначе прямо в каталог. -->
+  <div class="page" data-page="products">
+    <div class="cat-showcase">
+      <div class="page-head">
+        <div class="page-head-top">
+<?php if ($subParam !== null): ?>
+          <a class="back-page" href="category.php?name=<?= urlencode($categoryName) ?>" aria-label="Назад к подкатегориям"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+<?php else: ?>
+          <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
 <?php endif; ?>
-<?php $isFlat = isset($subGroup['genders']['__flat__']); ?>
+          <h1><?= h($subParam ?: $categoryName ?: 'Категория') ?></h1>
+        </div>
+        <p><?= subModelCount($activeSub) ?> <?= pluralRu(subModelCount($activeSub), 'модель', 'модели', 'моделей') ?> · цена указана оптовая, за единицу.</p>
+      </div>
+<?php $isFlat = isset($activeSub['genders']['__flat__']); ?>
 <?php foreach (($isFlat ? ['__flat__' => null] : $genderOrder) as $genderKey => $genderValue):
-        $genderModels = $subGroup['genders'][$genderKey] ?? [];
+        $genderModels = $activeSub['genders'][$genderKey] ?? [];
         if (empty($genderModels)) continue; ?>
 <?php if (!$isFlat): ?>
       <div class="gender-label"><?= h($genderValue) ?> <span class="count"><?= count($genderModels) ?></span></div>
@@ -227,10 +285,9 @@ unset($subGroup);
 <?php endforeach; ?>
       </div>
 <?php endforeach; ?>
-<?php endforeach; ?>
-<?php endif; ?>
     </div>
   </div>
+<?php endif; ?>
 </main>
 
 <script src="app.js"></script>
