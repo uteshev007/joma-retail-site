@@ -7,3 +7,7 @@ catalog/
 # Deployed separately (Cloudflare Worker / Render.com) — not part of the static site
 capi-worker/
 pdf-service/
+
+# Secrets created directly on the server (see v2-catalog/README.md)
+v2-catalog/config.php
+storage/
