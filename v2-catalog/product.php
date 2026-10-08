@@ -87,7 +87,13 @@ if ($genderParam !== null) {
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 <style>
-  .product-wrap{padding:1vh 5vw 4vh;max-width:760px}
+  /* Fixed padding, not vw — vw padding inside a max-width-capped block
+     balloons on wide desktops (5vw = 80px/side at 1600px) and was eating
+     enough of the 760px cap that the two-column row no longer fit,
+     silently wrapping photo/info into one cramped narrow column with a
+     huge unused gutter beside it. margin:auto centers the capped block
+     instead of leaving it pinned to the left edge. */
+  .product-wrap{padding:16px 20px 48px;max-width:760px;margin:0 auto}
   .product-main{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:28px}
   .product-main-photo{
     flex:1 1 320px;max-width:420px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;
