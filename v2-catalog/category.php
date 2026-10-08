@@ -186,7 +186,10 @@ function genderBucketPhoto(array $models): ?string
     .products-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:20px}
   }
   .product-card{display:flex;flex-direction:column}
-  .product-photo{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--panel);margin-bottom:8px}
+  /* Supplier photos are shot on a near-white backdrop baked into the
+     pixels — a dark card background behind them read as a stray white
+     rectangle, not an intentional card. Light background instead. */
+  .product-photo{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--paper);margin-bottom:8px}
   .product-photo img{width:100%;height:100%;object-fit:contain;padding:10px;box-sizing:border-box}
   /* Supplier's own image endpoint occasionally returns a corrupt JPEG for a
      given product code (confirmed directly — valid-looking headers, broken

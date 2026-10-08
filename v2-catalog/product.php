@@ -95,9 +95,13 @@ if ($genderParam !== null) {
      instead of leaving it pinned to the left edge. */
   .product-wrap{padding:16px 20px 48px;max-width:760px;margin:0 auto}
   .product-main{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:28px}
+  /* Supplier photos are shot on a near-white backdrop baked into the
+     pixels — a dark card background behind them read as a stray white
+     rectangle floating in a black hole. Light card + soft shadow instead,
+     so it looks like an intentional product card, not a mistake. */
   .product-main-photo{
     flex:1 1 320px;max-width:420px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;
-    background:var(--panel);position:relative;
+    background:var(--paper);position:relative;box-shadow:0 12px 32px rgba(0,0,0,.35);
   }
   .product-main-photo img{width:100%;height:100%;object-fit:contain;display:block;padding:20px;box-sizing:border-box}
   .product-main-photo.photo-missing::after{
@@ -117,7 +121,7 @@ if ($genderParam !== null) {
   .color-swatches{display:flex;flex-wrap:wrap;gap:8px}
   .color-swatch{
     width:52px;height:52px;border-radius:10px;overflow:hidden;border:2px solid var(--line);
-    background:var(--panel);cursor:pointer;flex:none;transition:border-color .2s;
+    background:var(--paper);cursor:pointer;flex:none;transition:border-color .2s;
   }
   .color-swatch img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
   .color-swatch.is-active{border-color:var(--accent)}
