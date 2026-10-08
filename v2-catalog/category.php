@@ -129,6 +129,14 @@ uksort($bySub, function ($a, $b) use ($bySub) {
   .product-card{display:flex;flex-direction:column}
   .product-photo{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--panel);margin-bottom:8px}
   .product-photo img{width:100%;height:100%;object-fit:cover}
+  /* Supplier's own image endpoint occasionally returns a corrupt JPEG for a
+     given product code (confirmed directly — valid-looking headers, broken
+     pixel data) — the img's onerror strips the broken <img>, leaving this
+     quiet placeholder instead of the browser's default broken-image icon. */
+  .product-photo.photo-missing::after{
+    content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font:11px var(--mono);color:var(--muted);text-align:center;
+  }
   .stock-dot{position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;border:1.5px solid var(--ink)}
   .stock-dot.ok{background:var(--stock-ok)}
   .stock-dot.low{background:var(--stock-low)}
@@ -183,7 +191,7 @@ uksort($bySub, function ($a, $b) use ($bySub) {
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok'); ?>
         <div class="product-card">
           <div class="product-photo">
-            <img src="<?= h((string) $item['photo_path']) ?>" alt="" loading="lazy">
+            <img src="<?= h((string) $item['photo_path']) ?>" alt="" loading="lazy" onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
           </div>
           <p class="product-name"><?= h((string) $item['name']) ?></p>

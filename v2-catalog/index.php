@@ -23,6 +23,12 @@ function h(string $s): string
   /* Index-page specifics: category count badge on each ring, no detail panel
      (the catalog index doesn't need one — each tile just opens the category). */
   .cat-count{font:11px var(--mono);color:var(--muted);margin-top:2px}
+  /* Same corrupt-image fallback as category.php — see its comment for why
+     this is needed (the supplier's own image endpoint, not our bug). */
+  .ring-thumb.photo-missing::after{
+    content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font:10px var(--mono);color:var(--muted);text-align:center;
+  }
 </style>
 </head>
 <body>
@@ -42,7 +48,7 @@ function h(string $s): string
 <?php foreach ($categories as $cat): ?>
             <a class="ring-card" href="category.php?name=<?= urlencode($cat['name']) ?>">
               <div class="ring-wrap">
-                <div class="ring-thumb"><img src="<?= h((string) $cat['photo']) ?>" alt="" loading="lazy"></div>
+                <div class="ring-thumb"><img src="<?= h((string) $cat['photo']) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
               </div>
               <p class="ring-name"><?= h($cat['name']) ?></p>
               <p class="cat-count"><?= $cat['count'] ?> товаров</p>
