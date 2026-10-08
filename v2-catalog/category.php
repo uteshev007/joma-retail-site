@@ -229,7 +229,7 @@ function genderBucketPhoto(array $models): ?string
     <div class="cat-showcase">
       <div class="page-head">
         <div class="page-head-top">
-          <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+          <a class="back-page" href="catalog.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($categoryName) ?></h1>
         </div>
         <p><?= count($realSubKeys) ?> <?= pluralRu(count($realSubKeys), 'подкатегория', 'подкатегории', 'подкатегорий') ?> · <?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?> всего.</p>
@@ -257,7 +257,7 @@ function genderBucketPhoto(array $models): ?string
     <div class="cat-showcase">
       <div class="page-head">
         <div class="page-head-top">
-          <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+          <a class="back-page" href="catalog.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($categoryName ?: 'Категория') ?></h1>
         </div>
       </div>
@@ -271,7 +271,7 @@ function genderBucketPhoto(array $models): ?string
 // существует для этой категории, иначе прямо в каталог.
 $backToSubOrCatalog = !empty($realSubKeys)
     ? 'category.php?name=' . urlencode($categoryName)
-    : 'index.php';
+    : 'catalog.php';
 $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкатегориям' : 'Назад в каталог';
 ?>
 <?php if ($needsGenderPicker): ?>
