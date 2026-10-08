@@ -14,6 +14,19 @@ function h(string $s): string
     return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 }
 
+function pluralRu(int $n, string $one, string $few, string $many): string
+{
+    $mod10 = $n % 10;
+    $mod100 = $n % 100;
+    if ($mod10 === 1 && $mod100 !== 11) {
+        return $one;
+    }
+    if (in_array($mod10, [2, 3, 4], true) && !in_array($mod100, [12, 13, 14], true)) {
+        return $few;
+    }
+    return $many;
+}
+
 function fmtTenge(?float $n): string
 {
     if ($n === null) {
@@ -43,6 +56,56 @@ foreach ($items as $item) {
     $byModel[$key]['colorCount']++;
 }
 $models = array_values($byModel);
+
+/**
+ * CRM присылает group как "мужская"/"Мужская"/"женская"/null вперемешку
+ * (регистр не нормализован на их стороне) — приводим к одному виду и
+ * раскладываем по секциям, вместо плоской свалки мужского/женского вместе.
+ */
+function normalizeGroup(?string $group): string
+{
+    $g = mb_strtolower(trim((string) $group));
+    if ($g === 'мужская') {
+        return 'мужская';
+    }
+    if ($g === 'женская') {
+        return 'женская';
+    }
+    return 'унисекс';
+}
+
+$genderOrder = ['мужская' => 'Мужская', 'женская' => 'Женская', 'унисекс' => 'Унисекс'];
+
+/**
+ * Группировка в два уровня: подкатегория (когда она реально есть в этой
+ * категории — например "Футбол/Футзал" / "Баскетбол" внутри "Игровая
+ * форма", или 6 видов внутри "Аксессуары"), а внутри неё — по полу.
+ * Для категорий без подкатегорий (большинство — Поло, Футболки и т.д.)
+ * верхний уровень просто один, без собственного заголовка.
+ */
+$bySub = [];
+foreach ($models as $m) {
+    $sub = $m['base']['subcategory'] ?: null;
+    $bySub[$sub ?? '__none__']['title'] = $sub;
+    $bySub[$sub ?? '__none__']['genders'][normalizeGroup($m['base']['group'] ?? null)][] = $m;
+}
+function subModelCount(array $group): int
+{
+    $n = 0;
+    foreach ($group['genders'] as $models) {
+        $n += count($models);
+    }
+    return $n;
+}
+
+// Подкатегории — в порядке убывания количества моделей, "без подкатегории"
+// (не встречается вместе с реальными подкатегориями на практике, но на
+// всякий случай) — последней.
+uksort($bySub, function ($a, $b) use ($bySub) {
+    if ($a === '__none__') return 1;
+    if ($b === '__none__') return -1;
+    return subModelCount($bySub[$b]) <=> subModelCount($bySub[$a]);
+});
 ?><!doctype html>
 <html lang="ru">
 <head>
@@ -74,6 +137,19 @@ $models = array_values($byModel);
   .product-meta{font:11px var(--mono);color:var(--muted);margin:0 0 4px}
   .product-price{font-size:14px;font-weight:700;margin:0}
   .empty-state{padding:6vh 5vw;color:var(--muted);text-align:center}
+  /* Two heading levels: a subcategory (e.g. "Футбол/Футзал" within "Игровая
+     форма") is a real content division, styled like a heading; gender is a
+     lighter sub-grouping nested under it (or under the page title directly,
+     for the many categories with no subcategory at all). */
+  .subcat-label{
+    margin:3vh 5vw 0;font:700 clamp(17px,2.2vh,22px) var(--display);
+  }
+  .gender-label{
+    display:flex;align-items:center;gap:10px;margin:1.6vh 5vw .8vh;
+    font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+  }
+  .gender-label::after{content:'';flex:1;height:1px;background:var(--line)}
+  .gender-label .count{color:var(--muted);font-weight:400}
 </style>
 </head>
 <body>
@@ -88,13 +164,22 @@ $models = array_values($byModel);
           <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($categoryName ?: 'Категория') ?></h1>
         </div>
-        <p><?= count($models) ?> моделей · цена указана оптовая, за единицу.</p>
+        <p><?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?> · цена указана оптовая, за единицу.</p>
       </div>
 <?php if (empty($models)): ?>
       <div class="empty-state">В этой категории пока нет товаров в выгрузке.</div>
 <?php else: ?>
+<?php foreach ($bySub as $subKey => $subGroup):
+        $hasSubcat = $subKey !== '__none__'; ?>
+<?php if ($hasSubcat): ?>
+      <h2 class="subcat-label"><?= h($subGroup['title']) ?></h2>
+<?php endif; ?>
+<?php foreach ($genderOrder as $genderKey => $genderTitle):
+        $genderModels = $subGroup['genders'][$genderKey] ?? [];
+        if (empty($genderModels)) continue; ?>
+      <div class="gender-label"><?= h($genderTitle) ?> <span class="count"><?= count($genderModels) ?></span></div>
       <div class="products-grid">
-<?php foreach ($models as $m): $item = $m['base']; $stock = totalStock($item);
+<?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok'); ?>
         <div class="product-card">
           <div class="product-photo">
@@ -102,11 +187,13 @@ $models = array_values($byModel);
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
           </div>
           <p class="product-name"><?= h((string) $item['name']) ?></p>
-          <p class="product-meta"><?= $m['colorCount'] ?> <?= $m['colorCount'] === 1 ? 'цвет' : 'цвета' ?><?= $item['group'] ? ' · ' . h((string) $item['group']) : '' ?></p>
+          <p class="product-meta"><?= $m['colorCount'] ?> <?= pluralRu($m['colorCount'], 'цвет', 'цвета', 'цветов') ?></p>
           <p class="product-price"><?= fmtTenge($item['price_opt'] !== null ? (float) $item['price_opt'] : null) ?></p>
         </div>
 <?php endforeach; ?>
       </div>
+<?php endforeach; ?>
+<?php endforeach; ?>
 <?php endif; ?>
     </div>
   </div>
