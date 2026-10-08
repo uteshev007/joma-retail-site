@@ -327,7 +327,7 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok');
         $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.', 'унисекс' => ''][normalizeGroup($item['group'] ?? null)] : ''; ?>
-        <div class="product-card">
+        <a class="product-card" href="product.php?model=<?= urlencode((string) ($item['model_number'] ?: $item['article'])) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= (!$isFlat && $genderParam !== null) ? '&gender=' . urlencode($genderParam) : '' ?>">
           <div class="product-photo">
             <img src="<?= h((string) $item['photo_path']) ?>" alt="" loading="lazy" onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
@@ -335,7 +335,7 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
           <p class="product-name"><?= h((string) $item['name']) ?></p>
           <p class="product-meta"><?= $m['colorCount'] ?> <?= pluralRu($m['colorCount'], 'цвет', 'цвета', 'цветов') ?><?= $genderSuffix ?></p>
           <p class="product-price"><?= fmtTenge($item['price_opt'] !== null ? (float) $item['price_opt'] : null) ?></p>
-        </div>
+        </a>
 <?php endforeach; ?>
       </div>
     </div>

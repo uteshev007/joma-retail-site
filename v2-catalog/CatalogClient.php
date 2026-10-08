@@ -77,6 +77,16 @@ final class CatalogClient
         ));
     }
 
+    /** Все цвета одной модели (по model_number) — для карточки товара. */
+    public function getItemsByModel(string $modelNumber): array
+    {
+        $data = $this->getItems();
+        return array_values(array_filter(
+            $data['items'],
+            fn($item) => ($item['model_number'] ?? $item['article'] ?? null) === $modelNumber
+        ));
+    }
+
     private function fetchFromApi(): ?array
     {
         $ch = curl_init($this->config['crm_api_url']);

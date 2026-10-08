@@ -1,0 +1,209 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/CatalogClient.php';
+
+$config = require __DIR__ . '/config.php';
+$client = new V2Catalog\CatalogClient($config);
+
+$modelNumber = $_GET['model'] ?? '';
+$categoryName = $_GET['category'] ?? '';
+$subParam = $_GET['sub'] ?? null;
+$genderParam = $_GET['gender'] ?? null;
+$colorParam = $_GET['color'] ?? null;
+
+$colors = $modelNumber !== '' ? $client->getItemsByModel($modelNumber) : [];
+
+function h(string $s): string
+{
+    return htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+}
+
+function pluralRu(int $n, string $one, string $few, string $many): string
+{
+    $mod10 = $n % 10;
+    $mod100 = $n % 100;
+    if ($mod10 === 1 && $mod100 !== 11) {
+        return $one;
+    }
+    if (in_array($mod10, [2, 3, 4], true) && !in_array($mod100, [12, 13, 14], true)) {
+        return $few;
+    }
+    return $many;
+}
+
+function fmtTenge(?float $n): string
+{
+    if ($n === null) {
+        return '—';
+    }
+    return number_format($n, 0, '', ' ') . ' ₸';
+}
+
+// Размеры в выгрузке идут вперемешку (детские "12 (2XS)" и взрослые "XL" в
+// произвольном порядке) — сортируем по реальной размерной сетке, а не по
+// алфавиту. Неизвестные значения (обувные "42.5", "ONE SIZE" и т.п.) просто
+// уходят в конец в исходном порядке.
+const SIZE_ORDER = [
+    '4 (6XS)', '6 (5XS)', '8 (4XS)', '10 (3XS)', '12 (2XS)', '14 (XS)',
+    'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL',
+];
+function sizeSortKey(string $size): int
+{
+    $i = array_search($size, SIZE_ORDER, true);
+    return $i === false ? 999 : $i;
+}
+
+$active = null;
+foreach ($colors as $c) {
+    if ($colorParam !== null && $c['article'] === $colorParam) {
+        $active = $c;
+        break;
+    }
+}
+if ($active === null) {
+    $active = $colors[0] ?? null;
+}
+if ($active !== null) {
+    $sizes = $active['sizes'] ?? [];
+    usort($sizes, fn($a, $b) => sizeSortKey($a['size']) <=> sizeSortKey($b['size']));
+}
+
+// Назад — туда, откуда реально пришли: экран пола, подкатегории или просто
+// категория, в зависимости от того, что было передано по цепочке ссылок.
+$backHref = 'category.php?name=' . urlencode($categoryName);
+if ($subParam !== null) {
+    $backHref .= '&sub=' . urlencode($subParam);
+}
+if ($genderParam !== null) {
+    $backHref .= '&gender=' . urlencode($genderParam);
+}
+?><!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title><?= h($active['name'] ?? 'Товар') ?> — Joma Teamwear</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  .product-wrap{padding:1vh 5vw 4vh;max-width:760px}
+  .product-main{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:28px}
+  .product-main-photo{
+    flex:1 1 320px;max-width:420px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;
+    background:var(--panel);position:relative;
+  }
+  .product-main-photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .product-main-photo.photo-missing::after{
+    content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font:12px var(--mono);color:var(--muted);
+  }
+  .product-info{flex:1 1 260px;display:flex;flex-direction:column;gap:14px}
+  .product-info h1{font-family:var(--serif);font-weight:400;font-size:clamp(22px,3vh,28px);margin:0;text-wrap:balance}
+  .product-info .cat-chain{font:11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .product-info .price-block{display:flex;align-items:baseline;gap:10px}
+  .product-info .price-opt{font:700 24px var(--display)}
+  .product-info .price-retail{font:13px var(--mono);color:var(--muted);text-decoration:line-through}
+  .product-info .composition{font-size:12.5px;color:var(--muted);line-height:1.5}
+
+  .color-row{display:flex;flex-direction:column;gap:8px}
+  .color-row .label{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .color-swatches{display:flex;flex-wrap:wrap;gap:8px}
+  .color-swatch{
+    width:52px;height:52px;border-radius:10px;overflow:hidden;border:2px solid var(--line);
+    background:var(--panel);cursor:pointer;flex:none;transition:border-color .2s;
+  }
+  .color-swatch img{width:100%;height:100%;object-fit:cover}
+  .color-swatch.is-active{border-color:var(--accent)}
+
+  .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-top:4px}
+  .size-cell{
+    border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;
+  }
+  .size-cell .size-name{font:600 12.5px var(--mono)}
+  .size-cell .size-qty{font:10px var(--mono);color:var(--muted);margin-top:2px}
+  .size-cell.out{opacity:.35}
+  .size-cell.ok .size-qty{color:var(--stock-ok)}
+  .size-cell.low .size-qty{color:var(--stock-low)}
+
+  .add-to-cart{
+    margin-top:6px;padding:14px 20px;border-radius:10px;border:none;background:var(--accent);color:var(--paper);
+    font:700 13px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
+  }
+  .add-to-cart:hover{opacity:.9}
+  .empty-state{padding:6vh 5vw;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+
+<?php include __DIR__ . '/partials/header.php'; ?>
+
+<main>
+  <div class="page" data-page="product">
+    <div class="cat-showcase" style="overflow-y:auto">
+      <div class="page-head" style="padding-bottom:0">
+        <div class="page-head-top">
+          <a class="back-page" href="<?= h($backHref) ?>" aria-label="Назад"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+        </div>
+      </div>
+<?php if ($active === null): ?>
+      <div class="empty-state">Товар не найден.</div>
+<?php else: ?>
+      <div class="product-wrap">
+        <div class="product-main">
+          <div class="product-main-photo" id="mainPhotoWrap">
+            <img src="<?= h((string) $active['photo_path']) ?>" alt="" id="mainPhoto" onerror="this.closest('.product-main-photo').classList.add('photo-missing');this.remove()">
+          </div>
+          <div class="product-info">
+            <p class="cat-chain"><?= h($categoryName) ?><?= $subParam !== null ? ' · ' . h($subParam) : '' ?></p>
+            <h1><?= h((string) $active['name']) ?></h1>
+            <div class="price-block">
+              <span class="price-opt"><?= fmtTenge($active['price_opt'] !== null ? (float) $active['price_opt'] : null) ?></span>
+<?php if (!empty($active['price_retail'])): ?>
+              <span class="price-retail"><?= fmtTenge((float) $active['price_retail']) ?></span>
+<?php endif; ?>
+            </div>
+<?php if (!empty($active['composition'])): ?>
+            <p class="composition"><?= h((string) $active['composition']) ?></p>
+<?php endif; ?>
+
+<?php if (count($colors) > 1): ?>
+            <div class="color-row">
+              <span class="label"><?= count($colors) ?> <?= pluralRu(count($colors), 'цвет', 'цвета', 'цветов') ?></span>
+              <div class="color-swatches">
+<?php foreach ($colors as $c): ?>
+                <a class="color-swatch<?= $c['article'] === $active['article'] ? ' is-active' : '' ?>"
+                   href="product.php?model=<?= urlencode($modelNumber) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= $genderParam !== null ? '&gender=' . urlencode($genderParam) : '' ?>&color=<?= urlencode($c['article']) ?>"
+                   title="<?= h((string) $c['color']) ?>">
+                  <img src="<?= h((string) $c['photo_path']) ?>" alt="" loading="lazy" onerror="this.closest('.color-swatch').style.background='var(--panel)';this.remove()">
+                </a>
+<?php endforeach; ?>
+              </div>
+            </div>
+<?php endif; ?>
+
+            <div class="color-row">
+              <span class="label">Наличие по размерам</span>
+              <div class="size-table">
+<?php foreach ($sizes as $s): $qty = (int) $s['qty'];
+                $cls = $qty === 0 ? 'out' : ($qty < 20 ? 'low' : 'ok'); ?>
+                <div class="size-cell <?= $cls ?>">
+                  <div class="size-name"><?= h((string) $s['size']) ?></div>
+                  <div class="size-qty"><?= $qty === 0 ? 'нет' : $qty ?></div>
+                </div>
+<?php endforeach; ?>
+              </div>
+            </div>
+
+            <button class="add-to-cart" data-cart-add>Добавить в заявку</button>
+          </div>
+        </div>
+      </div>
+<?php endif; ?>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
