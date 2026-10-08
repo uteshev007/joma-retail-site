@@ -6,6 +6,23 @@
     </a>
     <button class="icon-cart-btn" id="cartIconBtn" aria-label="Корзина">
       <svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6L5 3H2"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg>
+      <span class="badge" id="cartIconBadge" style="display:none">0</span>
     </button>
   </div>
 </header>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-panel-header">
+    <div><p class="cart-step">Ваш набор</p><h2>Заявка</h2></div>
+    <button class="cart-panel-close" id="cartClose" aria-label="Закрыть">×</button>
+  </div>
+  <div id="cartBody"><p class="cart-empty">Пока пусто — добавьте товары из каталога.</p></div>
+  <label class="cart-team-field">Название команды / клуба (необязательно)
+    <input type="text" id="cartTeamName" placeholder="Например, FC Astana Junior">
+  </label>
+  <div class="cart-summary" id="cartSummary" hidden><span class="label">Итого</span><span class="value">0 ₸</span></div>
+  <button class="cart-submit" id="cartSubmitBtn" disabled>Отправить заявку в WhatsApp →</button>
+</div>
+
+<script src="cart.js"></script>

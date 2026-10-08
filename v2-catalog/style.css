@@ -263,3 +263,7 @@
   .cart-summary .label{font:10.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
   .cart-summary .value{font:700 19px var(--mono);font-variant-numeric:tabular-nums}
   .cart-submit{margin-top:16px;width:100%;padding:14px;border-radius:10px;border:none;background:var(--paper);color:var(--ink);font:700 13px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer}
+  .cart-submit:disabled{opacity:.4;cursor:not-allowed}
+  .cart-empty{color:var(--muted);font-size:13px;padding:18px 0}
+  .size-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0 0 0 4px;line-height:1}
+  .size-remove:hover{color:var(--paper)}

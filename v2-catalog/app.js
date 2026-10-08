@@ -3,11 +3,28 @@
 // navigation is plain <a href> links. Only the ring-grid's column/row
 // sizing (desktop only; mobile scrolls) and the cart icon are shared.
 
-document.getElementById('cartIconBtn')?.addEventListener('click', () => {
-  // Cart isn't wired to this catalog yet — next step after the product
-  // grid itself. Placeholder so the button isn't silently dead.
-  alert('Корзина подключается следующим шагом.');
+// Cart panel open/close — JomaCart (cart.js, loaded via header.php on every
+// page) owns the data and rendering; this just wires the chrome around it.
+const cartOverlay = document.getElementById('cartOverlay');
+const cartPanel = document.getElementById('cartPanel');
+function openCart() {
+  cartOverlay?.classList.add('is-open');
+  cartPanel?.classList.add('is-open');
+}
+function closeCart() {
+  cartOverlay?.classList.remove('is-open');
+  cartPanel?.classList.remove('is-open');
+}
+document.getElementById('cartIconBtn')?.addEventListener('click', openCart);
+document.getElementById('cartClose')?.addEventListener('click', closeCart);
+cartOverlay?.addEventListener('click', closeCart);
+document.getElementById('cartSubmitBtn')?.addEventListener('click', () => {
+  if (typeof JomaCart !== 'undefined') JomaCart.submitViaWhatsApp();
 });
+window.addEventListener('jomacart:change', () => {
+  if (typeof JomaCart !== 'undefined') JomaCart.renderPanel();
+});
+if (typeof JomaCart !== 'undefined') JomaCart.renderPanel();
 
 // Only the category index page has a capped, single-screen ring grid
 // (14 categories fit on one screen); the per-category product grid uses

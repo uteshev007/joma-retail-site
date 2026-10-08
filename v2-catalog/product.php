@@ -127,20 +127,33 @@ if ($genderParam !== null) {
   .color-swatch.is-active{border-color:var(--accent)}
 
   .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-top:4px}
+  /* Each size is its own stepper, not just a stock readout — tap to add
+     a unit, the count shown replaces the stock number while selected so
+     it's clear what you're about to submit, not just what's in stock. */
   .size-cell{
     border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;
+    background:none;font-family:inherit;cursor:pointer;position:relative;transition:border-color .15s,background .15s;
   }
   .size-cell .size-name{font:600 12.5px var(--mono)}
-  .size-cell .size-qty{font:10px var(--mono);color:var(--muted);margin-top:2px}
-  .size-cell.out{opacity:.35}
-  .size-cell.ok .size-qty{color:var(--stock-ok)}
-  .size-cell.low .size-qty{color:var(--stock-low)}
+  .size-cell .size-stock{font:10px var(--mono);color:var(--muted);margin-top:2px}
+  .size-cell.out{opacity:.35;cursor:not-allowed}
+  .size-cell.ok .size-stock{color:var(--stock-ok)}
+  .size-cell.low .size-stock{color:var(--stock-low)}
+  .size-cell.is-selected{border-color:var(--accent);background:rgba(43,70,255,.12)}
+  .size-cell.is-selected .size-stock{color:var(--accent);font-weight:700}
+  .size-cell .qty-badge{
+    position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;border-radius:999px;background:var(--accent);
+    color:var(--paper);font:700 10px var(--mono);display:none;align-items:center;justify-content:center;padding:0 4px;
+  }
+  .size-cell.is-selected .qty-badge{display:flex}
 
   .add-to-cart{
     margin-top:6px;padding:14px 20px;border-radius:10px;border:none;background:var(--accent);color:var(--paper);
     font:700 13px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
   }
   .add-to-cart:hover{opacity:.9}
+  .add-to-cart:disabled{opacity:.4;cursor:not-allowed}
+  .size-hint{font:11px var(--mono);color:var(--muted)}
   .empty-state{padding:6vh 5vw;color:var(--muted);text-align:center}
 </style>
 </head>
@@ -193,19 +206,31 @@ if ($genderParam !== null) {
 <?php endif; ?>
 
             <div class="color-row">
-              <span class="label">Наличие по размерам</span>
-              <div class="size-table">
+              <span class="label">Размер и количество</span>
+              <div class="size-table" id="sizeTable">
 <?php foreach ($sizes as $s): $qty = (int) $s['qty'];
                 $cls = $qty === 0 ? 'out' : ($qty < 20 ? 'low' : 'ok'); ?>
-                <div class="size-cell <?= $cls ?>">
+                <button type="button" class="size-cell <?= $cls ?>" <?= $qty === 0 ? 'disabled' : '' ?>
+                        data-size="<?= h((string) $s['size']) ?>" data-stock="<?= $qty ?>">
                   <div class="size-name"><?= h((string) $s['size']) ?></div>
-                  <div class="size-qty"><?= $qty === 0 ? 'нет' : $qty ?></div>
-                </div>
+                  <div class="size-stock"><?= $qty === 0 ? 'нет' : $qty ?></div>
+                  <span class="qty-badge">0</span>
+                </button>
 <?php endforeach; ?>
               </div>
+              <span class="size-hint">Нажимайте на размер, чтобы добавить штуку — можно несколько размеров сразу</span>
             </div>
 
-            <button class="add-to-cart" data-cart-add>Добавить в заявку</button>
+            <button class="add-to-cart" id="addToCartBtn" disabled
+                    data-article="<?= h($active['article']) ?>"
+                    data-model="<?= h($modelNumber) ?>"
+                    data-name="<?= h((string) $active['name']) ?>"
+                    data-category="<?= h($categoryName) ?>"
+                    data-color="<?= h((string) $active['color']) ?>"
+                    data-photo="<?= h((string) $active['photo_path']) ?>"
+                    data-price="<?= h((string) ($active['price_opt'] ?? 0)) ?>">
+              Добавить в заявку
+            </button>
           </div>
         </div>
       </div>
@@ -215,5 +240,58 @@ if ($genderParam !== null) {
 </main>
 
 <script src="app.js"></script>
+<?php if ($active !== null): ?>
+<script>
+  // Per-size qty selector — tap a size to add one unit, tap again for
+  // another. Enables the add-to-cart button once at least one size has
+  // qty > 0 (an empty submission wouldn't mean anything).
+  (() => {
+    const qtyBySize = {};
+    const addBtn = document.getElementById('addToCartBtn');
+    document.querySelectorAll('#sizeTable .size-cell').forEach((cell) => {
+      if (cell.disabled) return;
+      cell.addEventListener('click', () => {
+        const size = cell.dataset.size;
+        qtyBySize[size] = (qtyBySize[size] || 0) + 1;
+        cell.classList.add('is-selected');
+        cell.querySelector('.qty-badge').textContent = String(qtyBySize[size]);
+        addBtn.disabled = false;
+      });
+      // Right-click / long-press alternative isn't worth the complexity
+      // here — a misclick is cheap to fix by just not adding that line.
+    });
+
+    addBtn.addEventListener('click', () => {
+      const sizes = Object.keys(qtyBySize).filter((s) => qtyBySize[s] > 0);
+      if (sizes.length === 0) return;
+      for (const size of sizes) {
+        JomaCart.addLine({
+          article: addBtn.dataset.article,
+          modelNumber: addBtn.dataset.model,
+          name: addBtn.dataset.name,
+          category: addBtn.dataset.category,
+          color: addBtn.dataset.color,
+          photo: addBtn.dataset.photo,
+          unitPrice: Number(addBtn.dataset.price) || 0,
+          size,
+          qty: qtyBySize[size],
+        });
+      }
+      // Reset the picker so a second click doesn't silently double-add,
+      // and confirm by opening the cart panel.
+      for (const size of sizes) {
+        qtyBySize[size] = 0;
+      }
+      document.querySelectorAll('#sizeTable .size-cell.is-selected').forEach((cell) => {
+        cell.classList.remove('is-selected');
+        cell.querySelector('.qty-badge').textContent = '0';
+      });
+      addBtn.disabled = true;
+      document.getElementById('cartOverlay')?.classList.add('is-open');
+      document.getElementById('cartPanel')?.classList.add('is-open');
+    });
+  })();
+</script>
+<?php endif; ?>
 </body>
 </html>
