@@ -35,6 +35,14 @@ const JomaCart = (() => {
     return l.article + '|' + l.size;
   }
 
+  // So a product page can show "you already have 3 of these in your cart"
+  // when enforcing the stock cap, instead of only knowing about clicks
+  // made in the current page view.
+  function getLineQty(article, size) {
+    const line = read().find((l) => l.article === article && l.size === size);
+    return line ? line.qty : 0;
+  }
+
   function addLine(line) {
     const lines = read();
     const key = lineKey(line);
@@ -177,5 +185,5 @@ const JomaCart = (() => {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`, '_blank');
   }
 
-  return { addLine, setQty, removeLine, clear, totalCount, totalSum, renderPanel, submitViaWhatsApp };
+  return { addLine, setQty, removeLine, clear, totalCount, totalSum, renderPanel, submitViaWhatsApp, getLineQty };
 })();

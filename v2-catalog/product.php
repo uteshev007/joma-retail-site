@@ -140,6 +140,8 @@ if ($genderParam !== null) {
   .size-cell.ok .size-stock{color:var(--stock-ok)}
   .size-cell.low .size-stock{color:var(--stock-low)}
   .size-cell.is-selected{border-color:var(--accent);background:rgba(43,70,255,.12)}
+  .size-cell.at-limit{border-color:var(--stock-out);animation:shake .35s}
+  @keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
   .size-cell.is-selected .size-stock{color:var(--accent);font-weight:700}
   .size-cell .qty-badge{
     position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;border-radius:999px;background:var(--accent);
@@ -218,7 +220,7 @@ if ($genderParam !== null) {
                 </button>
 <?php endforeach; ?>
               </div>
-              <span class="size-hint">Нажимайте на размер, чтобы добавить штуку — можно несколько размеров сразу</span>
+              <span class="size-hint">Нажимайте на размер, чтобы добавить штуку (можно несколько сразу) · правый клик — отменить</span>
             </div>
 
             <button class="add-to-cart" id="addToCartBtn" disabled
@@ -248,17 +250,36 @@ if ($genderParam !== null) {
   (() => {
     const qtyBySize = {};
     const addBtn = document.getElementById('addToCartBtn');
+    const article = addBtn.dataset.article;
     document.querySelectorAll('#sizeTable .size-cell').forEach((cell) => {
       if (cell.disabled) return;
+      const stock = Number(cell.dataset.stock) || 0;
       cell.addEventListener('click', () => {
         const size = cell.dataset.size;
-        qtyBySize[size] = (qtyBySize[size] || 0) + 1;
+        const alreadyInCart = (typeof JomaCart !== 'undefined' && JomaCart.getLineQty)
+          ? JomaCart.getLineQty(article, size)
+          : 0;
+        const pending = qtyBySize[size] || 0;
+        if (alreadyInCart + pending >= stock) {
+          cell.classList.add('at-limit');
+          setTimeout(() => cell.classList.remove('at-limit'), 400);
+          return;
+        }
+        qtyBySize[size] = pending + 1;
         cell.classList.add('is-selected');
         cell.querySelector('.qty-badge').textContent = String(qtyBySize[size]);
         addBtn.disabled = false;
       });
-      // Right-click / long-press alternative isn't worth the complexity
-      // here — a misclick is cheap to fix by just not adding that line.
+      // Right-click clears this size's pending qty — cheap undo for a
+      // misclick without resetting every size on the page.
+      cell.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (!qtyBySize[cell.dataset.size]) return;
+        qtyBySize[cell.dataset.size] = 0;
+        cell.classList.remove('is-selected');
+        cell.querySelector('.qty-badge').textContent = '0';
+        addBtn.disabled = !Object.values(qtyBySize).some((q) => q > 0);
+      });
     });
 
     addBtn.addEventListener('click', () => {
