@@ -106,6 +106,28 @@ uksort($bySub, function ($a, $b) use ($bySub) {
     if ($b === '__none__') return -1;
     return subModelCount($bySub[$b]) <=> subModelCount($bySub[$a]);
 });
+
+// Деление по полу добавляет свой заголовок на каждую подгруппу — если
+// почти всё приходится на одну группу (например, 2 женских + 13 унисекс),
+// секция из 2 карточек не помогает ориентироваться, а только добавляет
+// "воздуха" и создаёт ощущение, что каталог внезапно разросся. Показываем
+// пол отдельными секциями только когда минимум 2 группы набирают приличное
+// количество моделей каждая — иначе один плоский список.
+const MIN_MODELS_PER_GENDER_BUCKET = 3;
+foreach ($bySub as $subKey => &$subGroup) {
+    $meaningfulBuckets = count(array_filter(
+        $subGroup['genders'],
+        fn($g) => count($g) >= MIN_MODELS_PER_GENDER_BUCKET
+    ));
+    if ($meaningfulBuckets < 2) {
+        $flat = [];
+        foreach ($subGroup['genders'] as $genderModels) {
+            $flat = array_merge($flat, $genderModels);
+        }
+        $subGroup['genders'] = ['__flat__' => $flat];
+    }
+}
+unset($subGroup);
 ?><!doctype html>
 <html lang="ru">
 <head>
@@ -182,20 +204,24 @@ uksort($bySub, function ($a, $b) use ($bySub) {
 <?php if ($hasSubcat): ?>
       <h2 class="subcat-label"><?= h($subGroup['title']) ?></h2>
 <?php endif; ?>
-<?php foreach ($genderOrder as $genderKey => $genderTitle):
+<?php $isFlat = isset($subGroup['genders']['__flat__']); ?>
+<?php foreach (($isFlat ? ['__flat__' => null] : $genderOrder) as $genderKey => $genderValue):
         $genderModels = $subGroup['genders'][$genderKey] ?? [];
         if (empty($genderModels)) continue; ?>
-      <div class="gender-label"><?= h($genderTitle) ?> <span class="count"><?= count($genderModels) ?></span></div>
+<?php if (!$isFlat): ?>
+      <div class="gender-label"><?= h($genderValue) ?> <span class="count"><?= count($genderModels) ?></span></div>
+<?php endif; ?>
       <div class="products-grid">
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
-        $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok'); ?>
+        $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok');
+        $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.', 'унисекс' => ''][normalizeGroup($item['group'] ?? null)] : ''; ?>
         <div class="product-card">
           <div class="product-photo">
             <img src="<?= h((string) $item['photo_path']) ?>" alt="" loading="lazy" onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
           </div>
           <p class="product-name"><?= h((string) $item['name']) ?></p>
-          <p class="product-meta"><?= $m['colorCount'] ?> <?= pluralRu($m['colorCount'], 'цвет', 'цвета', 'цветов') ?></p>
+          <p class="product-meta"><?= $m['colorCount'] ?> <?= pluralRu($m['colorCount'], 'цвет', 'цвета', 'цветов') ?><?= $genderSuffix ?></p>
           <p class="product-price"><?= fmtTenge($item['price_opt'] !== null ? (float) $item['price_opt'] : null) ?></p>
         </div>
 <?php endforeach; ?>
