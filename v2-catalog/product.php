@@ -93,7 +93,7 @@ if ($genderParam !== null) {
     flex:1 1 320px;max-width:420px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;
     background:var(--panel);position:relative;
   }
-  .product-main-photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .product-main-photo img{width:100%;height:100%;object-fit:contain;display:block;padding:20px;box-sizing:border-box}
   .product-main-photo.photo-missing::after{
     content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font:12px var(--mono);color:var(--muted);
@@ -113,7 +113,7 @@ if ($genderParam !== null) {
     width:52px;height:52px;border-radius:10px;overflow:hidden;border:2px solid var(--line);
     background:var(--panel);cursor:pointer;flex:none;transition:border-color .2s;
   }
-  .color-swatch img{width:100%;height:100%;object-fit:cover}
+  .color-swatch img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
   .color-swatch.is-active{border-color:var(--accent)}
 
   .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-top:4px}

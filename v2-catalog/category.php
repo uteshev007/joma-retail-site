@@ -187,7 +187,7 @@ function genderBucketPhoto(array $models): ?string
   }
   .product-card{display:flex;flex-direction:column}
   .product-photo{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--panel);margin-bottom:8px}
-  .product-photo img{width:100%;height:100%;object-fit:cover}
+  .product-photo img{width:100%;height:100%;object-fit:contain;padding:10px;box-sizing:border-box}
   /* Supplier's own image endpoint occasionally returns a corrupt JPEG for a
      given product code (confirmed directly — valid-looking headers, broken
      pixel data) — the img's onerror strips the broken <img>, leaving this
