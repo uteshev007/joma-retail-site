@@ -8,6 +8,7 @@ $client = new V2Catalog\CatalogClient($config);
 
 $categoryName = $_GET['name'] ?? '';
 $subParam = $_GET['sub'] ?? null;
+$genderParam = $_GET['gender'] ?? null;
 $items = $categoryName !== '' ? $client->getItemsByCategory($categoryName) : [];
 
 function h(string $s): string
@@ -147,6 +148,22 @@ $needsSubPicker = count($realSubKeys) >= 2 && $subParam === null;
 // веткой $bySub — либо явно запрошенной, либо единственной ('__none__').
 $activeSubKey = $subParam !== null ? $subParam : '__none__';
 $activeSub = $bySub[$activeSubKey] ?? null;
+
+// Внутри подкатегории (или всей категории, если подкатегорий нет) — тот же
+// принцип: если деление по полу реально оправдано (посчитано выше), это
+// отдельный шаг выбора, а не секции на одной странице с товарами.
+$isFlat = $activeSub !== null && isset($activeSub['genders']['__flat__']);
+$needsGenderPicker = $activeSub !== null && !$isFlat && $genderParam === null;
+
+function genderBucketPhoto(array $models): ?string
+{
+    foreach ($models as $m) {
+        if (!empty($m['base']['photo_path'])) {
+            return $m['base']['photo_path'];
+        }
+    }
+    return null;
+}
 ?><!doctype html>
 <html lang="ru">
 <head>
@@ -246,29 +263,66 @@ $activeSub = $bySub[$activeSubKey] ?? null;
   </div>
 
 <?php else: ?>
-  <!-- Товары выбранной подкатегории (или всей категории, когда
-       подкатегорий нет вовсе). Возврат идёт на шаг выбора подкатегории,
-       если он был, иначе прямо в каталог. -->
+<?php
+// Куда ведёт "назад" с этого шага — к выбору подкатегории, если он
+// существует для этой категории, иначе прямо в каталог.
+$backToSubOrCatalog = !empty($realSubKeys)
+    ? 'category.php?name=' . urlencode($categoryName)
+    : 'index.php';
+$backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкатегориям' : 'Назад в каталог';
+?>
+<?php if ($needsGenderPicker): ?>
+  <!-- Шаг выбора пола — тот же паттерн колец, когда деление реально
+       оправдано (посчитано выше, в MIN_MODELS_PER_GENDER_BUCKET). -->
+  <div class="page" data-page="catalog">
+    <div class="cat-showcase">
+      <div class="page-head">
+        <div class="page-head-top">
+          <a class="back-page" href="<?= h($backToSubOrCatalog) ?>" aria-label="<?= h($backToSubOrCatalogLabel) ?>"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+          <h1><?= h($subParam ?: $categoryName) ?></h1>
+        </div>
+        <p><?= subModelCount($activeSub) ?> <?= pluralRu(subModelCount($activeSub), 'модель', 'модели', 'моделей') ?> всего.</p>
+      </div>
+      <div class="cat-main-row">
+        <div class="rings-col">
+          <div class="rings-grid">
+<?php foreach ($genderOrder as $genderKey => $genderTitle):
+          $genderModels = $activeSub['genders'][$genderKey] ?? [];
+          if (empty($genderModels)) continue; ?>
+            <a class="ring-card" href="category.php?name=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?>&gender=<?= urlencode($genderKey) ?>">
+              <div class="ring-wrap">
+                <div class="ring-thumb"><img src="<?= h((string) genderBucketPhoto($genderModels)) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
+              </div>
+              <p class="ring-name"><?= h($genderTitle) ?></p>
+              <p class="sub-count"><?= count($genderModels) ?> <?= pluralRu(count($genderModels), 'модель', 'модели', 'моделей') ?></p>
+            </a>
+<?php endforeach; ?>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<?php else: ?>
+  <!-- Товары: либо один пол (выбранный на шаге выше), либо вся подкатегория
+       плоским списком, когда деление по полу не было оправдано. -->
+<?php
+  $genderModels = $isFlat ? ($activeSub['genders']['__flat__'] ?? []) : ($activeSub['genders'][$genderParam] ?? []);
+  $pageTitle = !$isFlat && $genderParam !== null ? ($genderOrder[$genderParam] ?? $genderParam) : ($subParam ?: $categoryName);
+  $backHref = !$isFlat && $genderParam !== null
+      ? 'category.php?name=' . urlencode($categoryName) . ($subParam !== null ? '&sub=' . urlencode($subParam) : '')
+      : $backToSubOrCatalog;
+  $backLabel = !$isFlat && $genderParam !== null ? 'Назад к выбору пола' : $backToSubOrCatalogLabel;
+?>
   <div class="page" data-page="products">
     <div class="cat-showcase">
       <div class="page-head">
         <div class="page-head-top">
-<?php if ($subParam !== null): ?>
-          <a class="back-page" href="category.php?name=<?= urlencode($categoryName) ?>" aria-label="Назад к подкатегориям"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
-<?php else: ?>
-          <a class="back-page" href="index.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
-<?php endif; ?>
-          <h1><?= h($subParam ?: $categoryName ?: 'Категория') ?></h1>
+          <a class="back-page" href="<?= h($backHref) ?>" aria-label="<?= h($backLabel) ?>"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
+          <h1><?= h($pageTitle ?: 'Категория') ?></h1>
         </div>
-        <p><?= subModelCount($activeSub) ?> <?= pluralRu(subModelCount($activeSub), 'модель', 'модели', 'моделей') ?> · цена указана оптовая, за единицу.</p>
+        <p><?= count($genderModels) ?> <?= pluralRu(count($genderModels), 'модель', 'модели', 'моделей') ?> · цена указана оптовая, за единицу.</p>
       </div>
-<?php $isFlat = isset($activeSub['genders']['__flat__']); ?>
-<?php foreach (($isFlat ? ['__flat__' => null] : $genderOrder) as $genderKey => $genderValue):
-        $genderModels = $activeSub['genders'][$genderKey] ?? [];
-        if (empty($genderModels)) continue; ?>
-<?php if (!$isFlat): ?>
-      <div class="gender-label"><?= h($genderValue) ?> <span class="count"><?= count($genderModels) ?></span></div>
-<?php endif; ?>
       <div class="products-grid">
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok');
@@ -284,9 +338,9 @@ $activeSub = $bySub[$activeSubKey] ?? null;
         </div>
 <?php endforeach; ?>
       </div>
-<?php endforeach; ?>
     </div>
   </div>
+<?php endif; ?>
 <?php endif; ?>
 </main>
 
