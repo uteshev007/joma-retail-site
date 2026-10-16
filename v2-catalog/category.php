@@ -79,9 +79,15 @@ $byModel = [];
 foreach ($items as $item) {
     $key = $item['model_number'] ?: $item['article'];
     if (!isset($byModel[$key])) {
-        $byModel[$key] = ['base' => $item, 'colorCount' => 0];
+        $byModel[$key] = ['base' => $item, 'colorCount' => 0, 'photos' => []];
     }
     $byModel[$key]['colorCount']++;
+    // Собираем фото всех цветов модели — если у выбранного (первого
+    // встреченного) цвета фото битое/не грузится, карточка пробует фото
+    // другого цвета той же модели вместо пустого квадрата (см. imgFallbackChain в app.js).
+    if (!empty($item['photo_path'])) {
+        $byModel[$key]['photos'][] = $item['photo_path'];
+    }
 }
 $models = array_values($byModel);
 
@@ -187,11 +193,12 @@ function genderBucketPhoto(array $models): ?string
     .products-grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:20px}
   }
   .product-card{display:flex;flex-direction:column}
-  /* Supplier photos are shot on a near-white backdrop baked into the
-     pixels — a dark card background behind them read as a stray white
-     rectangle, not an intentional card. Light background instead. */
-  .product-photo{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:var(--paper);margin-bottom:8px}
-  .product-photo img{width:100%;height:100%;object-fit:contain;padding:10px;box-sizing:border-box}
+  /* Soft lavender tile (--tile), generously rounded — same card language as
+     the category grid's icon tiles, not a plain white box with a small
+     radius (that read as a palette swap, not a real redesign). */
+  .product-photo{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:var(--tile);margin-bottom:10px}
+  .product-photo img{width:100%;height:100%;object-fit:contain;padding:16px;box-sizing:border-box;transition:transform .25s}
+  .product-card:hover .product-photo img{transform:scale(1.05)}
   /* Supplier's own image endpoint occasionally returns a corrupt JPEG for a
      given product code (confirmed directly — valid-looking headers, broken
      pixel data) — the img's onerror strips the broken <img>, leaving this
@@ -331,9 +338,15 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok');
         $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.', 'унисекс' => ''][normalizeGroup($item['group'] ?? null)] : ''; ?>
+        <?php
+          $photoCandidates = array_values(array_unique($m['photos'] ?: [(string) ($item['photo_path'] ?? '')]));
+          $primaryPhoto = array_shift($photoCandidates);
+          $fallbackPhotos = array_map(fn($p) => photoProxyUrl($p), $photoCandidates);
+        ?>
         <a class="product-card" href="product.php?model=<?= urlencode((string) ($item['model_number'] ?: $item['article'])) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= (!$isFlat && $genderParam !== null) ? '&gender=' . urlencode($genderParam) : '' ?>">
           <div class="product-photo">
-            <img src="<?= h((string) photoProxyUrl($item['photo_path'])) ?>" alt="" loading="lazy" onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
+            <img src="<?= h((string) photoProxyUrl($primaryPhoto)) ?>" alt="" loading="lazy"
+                 data-fallback='<?= h(json_encode($fallbackPhotos)) ?>' onerror="imgFallbackChain(this)">
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
           </div>
           <p class="product-name"><?= h((string) $item['name']) ?></p>

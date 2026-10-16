@@ -23,6 +23,7 @@ $headerOnHero = $headerOnHero ?? false;
     <button class="cart-panel-close" id="cartClose" aria-label="Закрыть">×</button>
   </div>
   <div id="cartBody"><p class="cart-empty">Пока пусто — добавьте товары из каталога.</p></div>
+  <p class="cart-min-notice" id="cartMinNotice" hidden></p>
   <label class="cart-team-field">Телефон для связи
     <input type="tel" id="cartPhone" placeholder="+7 777 123 45 67" autocomplete="tel">
   </label>

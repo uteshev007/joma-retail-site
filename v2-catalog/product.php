@@ -95,16 +95,20 @@ if ($genderParam !== null) {
      huge unused gutter beside it. margin:auto centers the capped block
      instead of leaving it pinned to the left edge. */
   .product-wrap{padding:16px 20px 48px;max-width:760px;margin:0 auto}
-  .product-main{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:28px}
-  /* Supplier photos are shot on a near-white backdrop baked into the
-     pixels — a dark card background behind them read as a stray white
-     rectangle floating in a black hole. Light card + soft shadow instead,
-     so it looks like an intentional product card, not a mistake. */
+  /* align-items:flex-start, not the flex default (stretch) — otherwise the
+     photo box stretches to match the info column's height, which grew a
+     lot once sizes became one row each instead of a compact grid, and
+     the aspect-ratio-sized photo ends up tiny and off-center inside a
+     much taller box (found via screenshot: the photo box was 1263px tall
+     instead of ~500px). */
+  .product-main{display:flex;align-items:flex-start;gap:28px;flex-wrap:wrap;margin-bottom:28px}
+  /* Soft lavender tile (--tile), generously rounded — same card language as
+     the catalog/category grids, not a plain white box. */
   .product-main-photo{
-    flex:1 1 320px;max-width:420px;aspect-ratio:3/4;border-radius:16px;overflow:hidden;
-    background:var(--paper);position:relative;box-shadow:0 12px 32px rgba(0,0,0,.35);
+    flex:1 1 320px;max-width:420px;aspect-ratio:3/4;border-radius:28px;overflow:hidden;
+    background:var(--tile);position:relative;
   }
-  .product-main-photo img{width:100%;height:100%;object-fit:contain;display:block;padding:20px;box-sizing:border-box}
+  .product-main-photo img{width:100%;height:100%;object-fit:contain;display:block;padding:28px;box-sizing:border-box}
   .product-main-photo.photo-missing::after{
     content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font:12px var(--mono);color:var(--muted);
@@ -121,37 +125,49 @@ if ($genderParam !== null) {
   .color-row .label{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
   .color-swatches{display:flex;flex-wrap:wrap;gap:8px}
   .color-swatch{
-    width:52px;height:52px;border-radius:10px;overflow:hidden;border:2px solid var(--line);
-    background:var(--paper);cursor:pointer;flex:none;transition:border-color .2s;
+    width:52px;height:52px;border-radius:16px;overflow:hidden;border:2px solid transparent;
+    background:var(--tile);cursor:pointer;flex:none;transition:box-shadow .2s;
   }
   .color-swatch img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
-  .color-swatch.is-active{border-color:var(--accent)}
+  .color-swatch.is-active{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
 
-  .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px;margin-top:4px}
-  /* Each size is its own stepper, not just a stock readout — tap to add
-     a unit, the count shown replaces the stock number while selected so
-     it's clear what you're about to submit, not just what's in stock. */
-  .size-cell{
-    border:1px solid var(--line);border-radius:8px;padding:8px 6px;text-align:center;
-    background:none;font-family:inherit;cursor:pointer;position:relative;transition:border-color .15s,background .15s;
+  .size-table{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+  /* Each size is its own row with explicit +/- buttons (not tap-to-add on
+     the whole cell — "менять количество тапом не лучшая идея"). Out-of-stock
+     rows used to just get opacity:.35 on the whole cell, which dimmed the
+     already-muted "нет" text below readability on the dark theme — now only
+     the background is muted, text colors stay at full opacity so "нет в
+     наличии" stays legible ("не видно надписей"). */
+  .size-row{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    border:1px solid var(--line);border-radius:16px;padding:10px 10px 10px 16px;
+    background:var(--tile);transition:box-shadow .15s,background .15s;
   }
-  .size-cell .size-name{font:600 12.5px var(--mono)}
-  .size-cell .size-stock{font:10px var(--mono);color:var(--muted);margin-top:2px}
-  .size-cell.out{opacity:.35;cursor:not-allowed}
-  .size-cell.ok .size-stock{color:var(--stock-ok)}
-  .size-cell.low .size-stock{color:var(--stock-low)}
-  .size-cell.is-selected{border-color:var(--accent);background:rgba(43,70,255,.12)}
-  .size-cell.at-limit{border-color:var(--stock-out);animation:shake .35s}
+  .size-row-info{display:flex;flex-direction:column;gap:2px}
+  .size-row .size-name{font:700 14px var(--display)}
+  .size-row .size-stock{font:11px var(--mono)}
+  .size-row.ok .size-stock{color:var(--stock-ok)}
+  .size-row.low .size-stock{color:var(--stock-low)}
+  .size-row.out{background:var(--paper)}
+  .size-row.out .size-stock{color:var(--stock-out)}
+  .size-row.is-selected{background:#fff;box-shadow:0 0 0 2px var(--accent)}
+  .size-row.is-selected .size-stock{color:var(--accent);font-weight:700}
+  .size-row.at-limit{box-shadow:0 0 0 2px var(--stock-out);animation:shake .35s}
   @keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
-  .size-cell.is-selected .size-stock{color:var(--accent);font-weight:700}
-  .size-cell .qty-badge{
-    position:absolute;top:-7px;right:-7px;min-width:18px;height:18px;border-radius:999px;background:var(--accent);
-    color:var(--paper);font:700 10px var(--mono);display:none;align-items:center;justify-content:center;padding:0 4px;
+
+  /* Pill-shaped stepper, not a square box — matches the rounded, pill-CTA
+     language used everywhere else now (add-to-cart, cart-submit). */
+  .qty-stepper{display:flex;align-items:center;background:var(--panel);border-radius:999px;overflow:hidden;flex:none;box-shadow:inset 0 0 0 1px var(--line-strong)}
+  .qty-stepper button{
+    width:30px;height:30px;border:none;background:none;color:var(--ink);
+    font:18px var(--display);line-height:1;cursor:pointer;display:grid;place-items:center;
   }
-  .size-cell.is-selected .qty-badge{display:flex}
+  .qty-stepper button:hover:not(:disabled){color:var(--accent)}
+  .qty-stepper button:disabled{opacity:.3;cursor:not-allowed}
+  .qty-stepper .qty-value{min-width:26px;text-align:center;font:700 13px var(--mono);font-variant-numeric:tabular-nums}
 
   .add-to-cart{
-    margin-top:6px;padding:14px 20px;border-radius:10px;border:none;background:var(--accent);color:var(--paper);
+    margin-top:6px;padding:14px 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;
     font:700 13px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
   }
   .add-to-cart:hover{opacity:.9}
@@ -177,8 +193,21 @@ if ($genderParam !== null) {
 <?php else: ?>
       <div class="product-wrap">
         <div class="product-main">
+<?php
+            // Если фото активного цвета битое — пробуем фото других цветов
+            // этой же модели, прежде чем показывать пустой плейсхолдер
+            // (см. imgFallbackChain в app.js).
+            $mainFallbacks = [];
+            foreach ($colors as $c) {
+                if ($c['article'] !== $active['article'] && !empty($c['photo_path'])) {
+                    $mainFallbacks[] = photoProxyUrl($c['photo_path']);
+                }
+            }
+            $mainFallbacks = array_values(array_unique($mainFallbacks));
+          ?>
           <div class="product-main-photo" id="mainPhotoWrap">
-            <img src="<?= h((string) photoProxyUrl($active['photo_path'])) ?>" alt="" id="mainPhoto" onerror="this.closest('.product-main-photo').classList.add('photo-missing');this.remove()">
+            <img src="<?= h((string) photoProxyUrl($active['photo_path'])) ?>" alt="" id="mainPhoto"
+                 data-fallback='<?= h(json_encode($mainFallbacks)) ?>' onerror="imgFallbackChain(this)">
           </div>
           <div class="product-info">
             <p class="cat-chain"><?= h($categoryName) ?><?= $subParam !== null ? ' · ' . h($subParam) : '' ?></p>
@@ -213,15 +242,20 @@ if ($genderParam !== null) {
               <div class="size-table" id="sizeTable">
 <?php foreach ($sizes as $s): $qty = (int) $s['qty'];
                 $cls = $qty === 0 ? 'out' : ($qty < 20 ? 'low' : 'ok'); ?>
-                <button type="button" class="size-cell <?= $cls ?>" <?= $qty === 0 ? 'disabled' : '' ?>
-                        data-size="<?= h((string) $s['size']) ?>" data-stock="<?= $qty ?>">
-                  <div class="size-name"><?= h((string) $s['size']) ?></div>
-                  <div class="size-stock"><?= $qty === 0 ? 'нет' : $qty ?></div>
-                  <span class="qty-badge">0</span>
-                </button>
+                <div class="size-row <?= $cls ?>" data-size="<?= h((string) $s['size']) ?>" data-stock="<?= $qty ?>">
+                  <div class="size-row-info">
+                    <span class="size-name"><?= h((string) $s['size']) ?></span>
+                    <span class="size-stock"><?= $qty === 0 ? 'нет в наличии' : $qty . ' шт. на складе' ?></span>
+                  </div>
+                  <div class="qty-stepper">
+                    <button type="button" class="qty-dec" aria-label="Уменьшить количество" disabled>−</button>
+                    <span class="qty-value">0</span>
+                    <button type="button" class="qty-inc" aria-label="Увеличить количество" <?= $qty === 0 ? 'disabled' : '' ?>>+</button>
+                  </div>
+                </div>
 <?php endforeach; ?>
               </div>
-              <span class="size-hint">Нажимайте на размер, чтобы добавить штуку (можно несколько сразу) · правый клик — отменить</span>
+              <span class="size-hint">Кнопками +/− наберите количество по нужным размерам</span>
             </div>
 
             <button class="add-to-cart" id="addToCartBtn" disabled
@@ -245,42 +279,53 @@ if ($genderParam !== null) {
 <script src="app.js"></script>
 <?php if ($active !== null): ?>
 <script>
-  // Per-size qty selector — tap a size to add one unit, tap again for
-  // another. Enables the add-to-cart button once at least one size has
-  // qty > 0 (an empty submission wouldn't mean anything).
+  // Per-size qty selector — explicit +/- buttons per size (tap-to-increment
+  // on the whole cell was confusing: "менять количество тапом не лучшая
+  // идея"). Enables the add-to-cart button once at least one size has
+  // qty > 0.
   (() => {
     const qtyBySize = {};
     const addBtn = document.getElementById('addToCartBtn');
     const article = addBtn.dataset.article;
-    document.querySelectorAll('#sizeTable .size-cell').forEach((cell) => {
-      if (cell.disabled) return;
-      const stock = Number(cell.dataset.stock) || 0;
-      cell.addEventListener('click', () => {
-        const size = cell.dataset.size;
-        const alreadyInCart = (typeof JomaCart !== 'undefined' && JomaCart.getLineQty)
-          ? JomaCart.getLineQty(article, size)
-          : 0;
+
+    document.querySelectorAll('#sizeTable .size-row').forEach((row) => {
+      const size = row.dataset.size;
+      const stock = Number(row.dataset.stock) || 0;
+      const decBtn = row.querySelector('.qty-dec');
+      const incBtn = row.querySelector('.qty-inc');
+      const valueEl = row.querySelector('.qty-value');
+      if (stock === 0) return;
+
+      const alreadyInCart = (typeof JomaCart !== 'undefined' && JomaCart.getLineQty)
+        ? JomaCart.getLineQty(article, size)
+        : 0;
+      const available = Math.max(0, stock - alreadyInCart);
+
+      function render() {
+        const qty = qtyBySize[size] || 0;
+        valueEl.textContent = String(qty);
+        decBtn.disabled = qty <= 0;
+        incBtn.disabled = qty >= available;
+        row.classList.toggle('is-selected', qty > 0);
+        addBtn.disabled = !Object.values(qtyBySize).some((q) => q > 0);
+      }
+
+      incBtn.addEventListener('click', () => {
         const pending = qtyBySize[size] || 0;
-        if (alreadyInCart + pending >= stock) {
-          cell.classList.add('at-limit');
-          setTimeout(() => cell.classList.remove('at-limit'), 400);
+        if (pending >= available) {
+          row.classList.add('at-limit');
+          setTimeout(() => row.classList.remove('at-limit'), 400);
           return;
         }
         qtyBySize[size] = pending + 1;
-        cell.classList.add('is-selected');
-        cell.querySelector('.qty-badge').textContent = String(qtyBySize[size]);
-        addBtn.disabled = false;
+        render();
       });
-      // Right-click clears this size's pending qty — cheap undo for a
-      // misclick without resetting every size on the page.
-      cell.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (!qtyBySize[cell.dataset.size]) return;
-        qtyBySize[cell.dataset.size] = 0;
-        cell.classList.remove('is-selected');
-        cell.querySelector('.qty-badge').textContent = '0';
-        addBtn.disabled = !Object.values(qtyBySize).some((q) => q > 0);
+      decBtn.addEventListener('click', () => {
+        qtyBySize[size] = Math.max(0, (qtyBySize[size] || 0) - 1);
+        render();
       });
+
+      render();
     });
 
     addBtn.addEventListener('click', () => {
@@ -301,12 +346,16 @@ if ($genderParam !== null) {
       }
       // Reset the picker so a second click doesn't silently double-add,
       // and confirm by opening the cart panel.
-      for (const size of sizes) {
+      document.querySelectorAll('#sizeTable .size-row').forEach((row) => {
+        const size = row.dataset.size;
         qtyBySize[size] = 0;
-      }
-      document.querySelectorAll('#sizeTable .size-cell.is-selected').forEach((cell) => {
-        cell.classList.remove('is-selected');
-        cell.querySelector('.qty-badge').textContent = '0';
+        row.classList.remove('is-selected');
+        const valueEl = row.querySelector('.qty-value');
+        const decBtn = row.querySelector('.qty-dec');
+        const incBtn = row.querySelector('.qty-inc');
+        if (valueEl) valueEl.textContent = '0';
+        if (decBtn) decBtn.disabled = true;
+        if (incBtn && Number(row.dataset.stock) > 0) incBtn.disabled = false;
       });
       addBtn.disabled = true;
       document.getElementById('cartOverlay')?.classList.add('is-open');

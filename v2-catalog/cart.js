@@ -11,6 +11,9 @@
 const JomaCart = (() => {
   const STORAGE_KEY = 'jomaCartV2';
   const WHATSAPP_NUMBER = '77782683837';
+  // Оптовый минимум — меньше не отгружаем, см. требование "минимальный
+  // закуп от 10шт, не меньше".
+  const MIN_ORDER_QTY = 10;
 
   function read() {
     try {
@@ -122,9 +125,10 @@ const JomaCart = (() => {
       return;
     }
 
+    const belowMin = count < MIN_ORDER_QTY;
     if (summary) summary.hidden = false;
     if (submitBtn) {
-      submitBtn.disabled = false;
+      submitBtn.disabled = belowMin;
       // Un-hide in case a previous successful submission hid it (see
       // app.js's post-submit handling) — a fresh add-to-cart after that
       // should bring the button back.
@@ -163,6 +167,25 @@ const JomaCart = (() => {
       summary.querySelector('.value').textContent = fmtTenge(totalSum());
       summary.querySelector('.label').textContent = `Итого · ${count} шт`;
     }
+
+    const minNotice = document.getElementById('cartMinNotice');
+    if (minNotice) {
+      if (belowMin) {
+        const left = MIN_ORDER_QTY - count;
+        minNotice.textContent = `Минимальный заказ — ${MIN_ORDER_QTY} шт. Добавьте ещё ${left} ${pluralPiece(left)}.`;
+        minNotice.hidden = false;
+      } else {
+        minNotice.hidden = true;
+      }
+    }
+  }
+
+  function pluralPiece(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'штуку';
+    if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'штуки';
+    return 'штук';
   }
 
   function esc(s) {
@@ -234,6 +257,9 @@ const JomaCart = (() => {
     const cart = leadCartLines();
     if (cart.length === 0) {
       return { ok: false, error: 'empty_cart' };
+    }
+    if (totalCount() < MIN_ORDER_QTY) {
+      return { ok: false, error: 'below_minimum' };
     }
     const payload = {
       phone,

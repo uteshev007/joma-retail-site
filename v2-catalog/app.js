@@ -3,6 +3,28 @@
 // navigation is plain <a href> links. Only the ring-grid's column/row
 // sizing (desktop only; mobile scrolls) and the cart icon are shared.
 
+// A product's main/card photo failing to load used to just blank out to a
+// plain background ("не было белых квадратов" — but plenty of blank ones).
+// Before giving up, try the other colors of the same model (category.php/
+// product.php embed them as data-fallback, proxied) — only once that list
+// is exhausted do we fall back to the quiet "Нет фото" placeholder.
+function imgFallbackChain(img) {
+  let fallbacks = [];
+  try {
+    fallbacks = JSON.parse(img.dataset.fallback || '[]');
+  } catch {
+    fallbacks = [];
+  }
+  if (fallbacks.length > 0) {
+    const next = fallbacks.shift();
+    img.dataset.fallback = JSON.stringify(fallbacks);
+    img.src = next;
+    return;
+  }
+  if (img.parentElement) img.parentElement.classList.add('photo-missing');
+  img.remove();
+}
+
 // Cart panel open/close — JomaCart (cart.js, loaded via header.php on every
 // page) owns the data and rendering; this just wires the chrome around it.
 const cartOverlay = document.getElementById('cartOverlay');
@@ -99,6 +121,7 @@ submitBtn?.addEventListener('click', async () => {
     const messages = {
       invalid_phone: 'Проверьте номер телефона — похоже, в нём ошибка.',
       empty_cart: 'Корзина пуста.',
+      below_minimum: 'Минимальный заказ — 10 шт.',
     };
     showCartError(messages[result.error] || 'Не получилось отправить заявку. Попробуйте ещё раз или напишите нам в WhatsApp.');
     if (cartWaFallback && cartWaLink) {
