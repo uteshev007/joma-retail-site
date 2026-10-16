@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogClient.php';
+require_once __DIR__ . '/photo-helpers.php';
 
 $config = require __DIR__ . '/config.php';
 $client = new V2Catalog\CatalogClient($config);
@@ -177,7 +178,7 @@ if ($genderParam !== null) {
       <div class="product-wrap">
         <div class="product-main">
           <div class="product-main-photo" id="mainPhotoWrap">
-            <img src="<?= h((string) $active['photo_path']) ?>" alt="" id="mainPhoto" onerror="this.closest('.product-main-photo').classList.add('photo-missing');this.remove()">
+            <img src="<?= h((string) photoProxyUrl($active['photo_path'])) ?>" alt="" id="mainPhoto" onerror="this.closest('.product-main-photo').classList.add('photo-missing');this.remove()">
           </div>
           <div class="product-info">
             <p class="cat-chain"><?= h($categoryName) ?><?= $subParam !== null ? ' · ' . h($subParam) : '' ?></p>
@@ -200,7 +201,7 @@ if ($genderParam !== null) {
                 <a class="color-swatch<?= $c['article'] === $active['article'] ? ' is-active' : '' ?>"
                    href="product.php?model=<?= urlencode($modelNumber) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= $genderParam !== null ? '&gender=' . urlencode($genderParam) : '' ?>&color=<?= urlencode($c['article']) ?>"
                    title="<?= h((string) $c['color']) ?>">
-                  <img src="<?= h((string) $c['photo_path']) ?>" alt="" loading="lazy" onerror="this.closest('.color-swatch').style.background='var(--panel)';this.remove()">
+                  <img src="<?= h((string) photoProxyUrl($c['photo_path'])) ?>" alt="" loading="lazy" onerror="this.closest('.color-swatch').style.background='var(--panel)';this.remove()">
                 </a>
 <?php endforeach; ?>
               </div>
@@ -229,7 +230,7 @@ if ($genderParam !== null) {
                     data-name="<?= h((string) $active['name']) ?>"
                     data-category="<?= h($categoryName) ?>"
                     data-color="<?= h((string) $active['color']) ?>"
-                    data-photo="<?= h((string) $active['photo_path']) ?>"
+                    data-photo="<?= h((string) photoProxyUrl($active['photo_path'])) ?>"
                     data-price="<?= h((string) ($active['price_opt'] ?? 0)) ?>">
               Добавить в заявку
             </button>

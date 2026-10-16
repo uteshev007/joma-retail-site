@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogClient.php';
+require_once __DIR__ . '/photo-helpers.php';
 
 $config = require __DIR__ . '/config.php';
 $client = new V2Catalog\CatalogClient($config);
@@ -240,7 +241,7 @@ function genderBucketPhoto(array $models): ?string
 <?php foreach ($realSubKeys as $subKey): $sub = $bySub[$subKey]; ?>
             <a class="ring-card" href="category.php?name=<?= urlencode($categoryName) ?>&sub=<?= urlencode($subKey) ?>">
               <div class="ring-wrap">
-                <div class="ring-thumb"><img src="<?= h((string) $sub['photo']) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
+                <div class="ring-thumb"><img src="<?= h((string) photoProxyUrl($sub['photo'])) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
               </div>
               <p class="ring-name"><?= h($subKey) ?></p>
               <p class="sub-count"><?= subModelCount($sub) ?> <?= pluralRu(subModelCount($sub), 'модель', 'модели', 'моделей') ?></p>
@@ -294,7 +295,7 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
           if (empty($genderModels)) continue; ?>
             <a class="ring-card" href="category.php?name=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?>&gender=<?= urlencode($genderKey) ?>">
               <div class="ring-wrap">
-                <div class="ring-thumb"><img src="<?= h((string) genderBucketPhoto($genderModels)) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
+                <div class="ring-thumb"><img src="<?= h((string) photoProxyUrl(genderBucketPhoto($genderModels))) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
               </div>
               <p class="ring-name"><?= h($genderTitle) ?></p>
               <p class="sub-count"><?= count($genderModels) ?> <?= pluralRu(count($genderModels), 'модель', 'модели', 'моделей') ?></p>
@@ -332,7 +333,7 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
         $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.', 'унисекс' => ''][normalizeGroup($item['group'] ?? null)] : ''; ?>
         <a class="product-card" href="product.php?model=<?= urlencode((string) ($item['model_number'] ?: $item['article'])) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= (!$isFlat && $genderParam !== null) ? '&gender=' . urlencode($genderParam) : '' ?>">
           <div class="product-photo">
-            <img src="<?= h((string) $item['photo_path']) ?>" alt="" loading="lazy" onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
+            <img src="<?= h((string) photoProxyUrl($item['photo_path'])) ?>" alt="" loading="lazy" onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
           </div>
           <p class="product-name"><?= h((string) $item['name']) ?></p>

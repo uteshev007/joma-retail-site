@@ -183,6 +183,12 @@ const JomaCart = (() => {
       text += `• ${g.name} (${g.color}) — ${sizesText}\n`;
     }
     text += `\nИтого: ${fmtTenge(totalSum())}`;
+    const printCheckbox = document.getElementById('cartPrintNeeded');
+    if (printCheckbox && printCheckbox.checked) {
+      const printComment = document.getElementById('cartPrintComment');
+      const comment = printComment && printComment.value.trim() ? ` (${printComment.value.trim()})` : '';
+      text += `\n\nНужно нанесение (логотип/принт)${comment}`;
+    }
     return text;
   }
 
@@ -195,26 +201,37 @@ const JomaCart = (() => {
     return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildWhatsAppMessage())}`;
   }
 
-  // CRM's /api/lead only wants category + total qty per category (it
-  // builds the actual брифф/подборку from its own catalog data, not from
-  // whatever the visitor's browser thinks the price was) — not the full
-  // per-size/per-color breakdown the cart panel shows.
-  function categoryTotals() {
-    const lines = read();
-    const byCategory = new Map();
-    for (const l of lines) {
-      byCategory.set(l.category, (byCategory.get(l.category) || 0) + l.qty);
-    }
-    return Array.from(byCategory.entries()).map(([category, qty]) => ({ category, qty }));
+  // Доработка 16.10.2026: раньше сюда сводилось только {category, qty} —
+  // артикул, размер, цвет терялись, хотя в самой корзине (строки lines)
+  // всё это есть. CRM (раздел 12.1, доработка 16.10.2026 (13)) теперь
+  // умеет брать точный артикул+qty из каждой строки корзины — поэтому
+  // шлём сюда полные строки как есть, без сведения по категории.
+  function leadCartLines() {
+    return read().map((l) => ({
+      article: l.article,
+      model: l.modelNumber || null,
+      name: l.name,
+      category: l.category,
+      color: l.color || null,
+      size: l.size || null,
+      qty: l.qty,
+      unitPrice: l.unitPrice || 0,
+    }));
   }
 
   /**
    * Submits the lead. Returns a Promise resolving to
    * {ok: true} or {ok: false, error: string} — never rejects, so the
    * caller doesn't need its own try/catch for the network-failure case.
+   *
+   * printNeeded/printComment: нанесение (лого/принт) — сайт только
+   * фиксирует намерение клиента и свободный комментарий (место/логотип),
+   * саму логику выбора мест нанесения и расчёт цены (от 1500тг + 500тг за
+   * каждое место) делает менеджер в CRM при подборе (app/Selection.php) —
+   * сайт её не дублирует.
    */
-  async function submitLead(phone, name) {
-    const cart = categoryTotals();
+  async function submitLead(phone, name, printNeeded, printComment) {
+    const cart = leadCartLines();
     if (cart.length === 0) {
       return { ok: false, error: 'empty_cart' };
     }
@@ -222,6 +239,8 @@ const JomaCart = (() => {
       phone,
       name: name || null,
       cart,
+      printNeeded: !!printNeeded,
+      printComment: printComment || null,
       utm: null,
       fbp: readCookie('_fbp'),
       fbc: readCookie('_fbc'),

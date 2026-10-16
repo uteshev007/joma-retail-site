@@ -4,7 +4,7 @@
 $headerOnHero = $headerOnHero ?? false;
 ?>
 <header class="site-header<?= $headerOnHero ? ' on-hero' : '' ?>" id="siteHeader">
-  <a href="/v2-catalog/"><img class="wordmark" src="/logo/logo-footer-wordmark.png" alt="Joma"></a>
+  <a href="/"><img class="wordmark" src="/logo/logo-footer-wordmark.png" alt="Joma"></a>
   <div class="header-right">
     <a class="wa-btn desktop-nav" href="https://wa.me/77782683837" aria-label="WhatsApp" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347M12 0C5.373 0 0 5.373 0 12c0 2.123.555 4.116 1.528 5.845L0 24l6.335-1.652C8.008 23.412 9.966 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0m0 21.965c-1.87 0-3.607-.559-5.055-1.516l-.363-.216-3.72.969.99-3.622-.235-.373A9.933 9.933 0 0 1 2.032 12C2.032 6.517 6.517 2.032 12 2.032S21.968 6.517 21.968 12 17.483 21.965 12 21.965"/></svg>
@@ -32,6 +32,14 @@ $headerOnHero = $headerOnHero ?? false;
   <label class="cart-team-field">Название команды / клуба (необязательно)
     <input type="text" id="cartTeamName" placeholder="Например, FC Astana Junior">
   </label>
+  <label class="cart-print-field">
+    <input type="checkbox" id="cartPrintNeeded">
+    Нужно нанесение (логотип / принт)
+  </label>
+  <label class="cart-team-field" id="cartPrintCommentWrap" hidden>Что и куда нанести (необязательно)
+    <input type="text" id="cartPrintComment" placeholder="Например, логотип на груди и номер на спине">
+  </label>
+  <p class="cart-print-hint">Точное место нанесения и цену согласует менеджер после заявки.</p>
   <p class="cart-error" id="cartError" hidden></p>
   <div class="cart-summary" id="cartSummary" hidden><span class="label">Итого</span><span class="value">0 ₸</span></div>
   <button class="cart-submit" id="cartSubmitBtn" disabled>Отправить заявку</button>

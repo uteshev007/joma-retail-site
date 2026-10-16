@@ -41,6 +41,15 @@ function hideCartError() {
   if (cartError) cartError.hidden = true;
 }
 
+// Comment field only matters once the visitor says they need branding —
+// keep it hidden until then, matches the checkbox state on load too (in
+// case the panel re-renders while it's already checked).
+const cartPrintNeeded = document.getElementById('cartPrintNeeded');
+const cartPrintCommentWrap = document.getElementById('cartPrintCommentWrap');
+cartPrintNeeded?.addEventListener('change', () => {
+  if (cartPrintCommentWrap) cartPrintCommentWrap.hidden = !cartPrintNeeded.checked;
+});
+
 submitBtn?.addEventListener('click', async () => {
   if (typeof JomaCart === 'undefined') return;
   hideCartError();
@@ -62,7 +71,13 @@ submitBtn?.addEventListener('click', async () => {
   const originalLabel = submitBtn.textContent;
   submitBtn.textContent = 'Отправляем…';
 
-  const result = await JomaCart.submitLead(phone, nameInput ? nameInput.value.trim() : '');
+  const printCommentInput = document.getElementById('cartPrintComment');
+  const result = await JomaCart.submitLead(
+    phone,
+    nameInput ? nameInput.value.trim() : '',
+    cartPrintNeeded ? cartPrintNeeded.checked : false,
+    printCommentInput ? printCommentInput.value.trim() : ''
+  );
 
   submitBtn.classList.remove('is-loading');
   submitBtn.textContent = originalLabel;
@@ -76,6 +91,9 @@ submitBtn?.addEventListener('click', async () => {
     const summary = document.getElementById('cartSummary');
     if (summary) summary.hidden = true;
     submitBtn.hidden = true;
+    if (cartPrintNeeded) cartPrintNeeded.checked = false;
+    if (cartPrintCommentWrap) cartPrintCommentWrap.hidden = true;
+    if (printCommentInput) printCommentInput.value = '';
   } else {
     submitBtn.disabled = false;
     const messages = {

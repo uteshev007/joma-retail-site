@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogClient.php';
+require_once __DIR__ . '/photo-helpers.php';
 
 $config = require __DIR__ . '/config.php';
 $client = new V2Catalog\CatalogClient($config);
@@ -48,7 +49,7 @@ function h(string $s): string
 <?php foreach ($categories as $cat): ?>
             <a class="ring-card" href="category.php?name=<?= urlencode($cat['name']) ?>">
               <div class="ring-wrap">
-                <div class="ring-thumb"><img src="<?= h((string) $cat['photo']) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
+                <div class="ring-thumb"><img src="<?= h((string) photoProxyUrl($cat['photo'])) ?>" alt="" loading="lazy" onerror="this.closest('.ring-thumb').classList.add('photo-missing');this.remove()"></div>
               </div>
               <p class="ring-name"><?= h($cat['name']) ?></p>
               <p class="cat-count"><?= $cat['count'] ?> товаров</p>

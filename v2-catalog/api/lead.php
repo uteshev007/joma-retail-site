@@ -53,15 +53,28 @@ if (strlen($digits) !== 11 || $digits[0] !== '7') {
 }
 $normalizedPhone = '+' . $digits;
 
+// Доработка 16.10.2026: раньше здесь каждая строка корзины обрезалась до
+// {category, qty} — артикул, размер, цвет терялись ещё на этом прокси,
+// даже если cart.js их прислал (найдено при разборе потерянных данных по
+// сделке №23, см. CRM app/helpers.php/public/index.php доработка (13)).
+// Теперь пробрасываем всё, что реально есть в строке корзины.
 $payload = [
     'phone' => $normalizedPhone,
     'name' => $name !== '' ? $name : null,
     'cart' => array_map(static function ($line) {
         return [
+            'article' => (string) ($line['article'] ?? ''),
+            'model' => $line['model'] ?? null,
+            'name' => (string) ($line['name'] ?? ''),
             'category' => (string) ($line['category'] ?? ''),
+            'color' => $line['color'] ?? null,
+            'size' => $line['size'] ?? null,
             'qty' => (int) ($line['qty'] ?? 0),
+            'unitPrice' => (float) ($line['unitPrice'] ?? 0),
         ];
     }, $cart),
+    'printNeeded' => !empty($input['printNeeded']),
+    'printComment' => !empty($input['printComment']) ? (string) $input['printComment'] : null,
     'utm' => $input['utm'] ?? null,
     'fbp' => $input['fbp'] ?? null,
     'fbc' => $input['fbc'] ?? null,
