@@ -41,7 +41,6 @@ function h(string $s): string
     <div class="cat-showcase">
       <div class="page-head">
         <h1>Каталог</h1>
-        <p><?= count($categories) ?> категорий · <?= array_sum(array_column($categories, 'count')) ?> товаров — данные синхронизируются из CRM каждые <?= (int) ($config['cache_ttl_seconds'] / 60) ?> мин.</p>
       </div>
       <div class="cat-main-row">
         <div class="rings-col">
@@ -61,6 +60,8 @@ function h(string $s): string
     </div>
   </div>
 </main>
+
+<?php include __DIR__ . '/partials/footer.php'; ?>
 
 <script src="app.js"></script>
 </body>

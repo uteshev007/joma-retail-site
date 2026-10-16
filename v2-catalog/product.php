@@ -279,6 +279,8 @@ if ($genderParam !== null) {
   </div>
 </main>
 
+<?php include __DIR__ . '/partials/footer.php'; ?>
+
 <script src="app.js"></script>
 <?php if ($active !== null): ?>
 <script>

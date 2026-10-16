@@ -235,3 +235,22 @@
   .cart-success{margin:12px 0 0;padding:14px 12px;border-radius:8px;background:rgba(30,158,90,.1);border:1px solid rgba(30,158,90,.3);color:var(--stock-ok);font-size:13px;line-height:1.5;text-align:center}
   .cart-wa-fallback{margin-top:10px;font-size:11.5px;color:var(--muted);text-align:center}
   .cart-wa-fallback a{color:var(--ink);text-decoration:underline}
+
+  /* ================= FOOTER ================= */
+  /* Содержимое — как на старом сайте (логотип, адрес, Instagram, WhatsApp),
+     вёрстка заново под текущие токены светлой темы, не копия старых
+     итеративных !important-патчей. */
+  .site-footer{
+    display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;
+    padding:22px 5vw;border-top:1px solid var(--line);
+  }
+  .site-footer .footer-logo{height:20px;width:auto;flex:none}
+  .site-footer address{font:11px var(--mono);font-style:normal;color:var(--muted);margin:0;flex:1;min-width:200px;text-align:center}
+  .footer-links{display:flex;align-items:center;gap:16px;flex:none}
+  .footer-icon-link{display:grid;place-items:center}
+  .footer-icon-link img,.footer-icon-link svg{width:22px;height:22px;display:block}
+  @media(max-width:680px){
+    .site-footer{flex-direction:column;text-align:center;padding:20px 5vw 28px}
+    .site-footer address{order:3;text-align:center}
+    .footer-links{order:2}
+  }

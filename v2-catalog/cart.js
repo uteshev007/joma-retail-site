@@ -10,7 +10,7 @@
 
 const JomaCart = (() => {
   const STORAGE_KEY = 'jomaCartV2';
-  const WHATSAPP_NUMBER = '77782683837';
+  const WHATSAPP_NUMBER = '77080298284';
   // Оптовый минимум — меньше не отгружаем, см. требование "минимальный
   // закуп от 10шт, не меньше".
   const MIN_ORDER_QTY = 10;

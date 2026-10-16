@@ -240,7 +240,6 @@ function genderBucketPhoto(array $models): ?string
           <a class="back-page" href="catalog.php" aria-label="Назад в каталог"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($categoryName) ?></h1>
         </div>
-        <p><?= count($realSubKeys) ?> <?= pluralRu(count($realSubKeys), 'подкатегория', 'подкатегории', 'подкатегорий') ?> · <?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?> всего.</p>
       </div>
       <div class="cat-main-row">
         <div class="rings-col">
@@ -292,7 +291,6 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
           <a class="back-page" href="<?= h($backToSubOrCatalog) ?>" aria-label="<?= h($backToSubOrCatalogLabel) ?>"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($subParam ?: $categoryName) ?></h1>
         </div>
-        <p><?= subModelCount($activeSub) ?> <?= pluralRu(subModelCount($activeSub), 'модель', 'модели', 'моделей') ?> всего.</p>
       </div>
       <div class="cat-main-row">
         <div class="rings-col">
@@ -332,7 +330,6 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
           <a class="back-page" href="<?= h($backHref) ?>" aria-label="<?= h($backLabel) ?>"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></a>
           <h1><?= h($pageTitle ?: 'Категория') ?></h1>
         </div>
-        <p><?= count($genderModels) ?> <?= pluralRu(count($genderModels), 'модель', 'модели', 'моделей') ?> · цена указана оптовая, за единицу.</p>
       </div>
       <div class="products-grid">
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
@@ -360,6 +357,8 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
 <?php endif; ?>
 <?php endif; ?>
 </main>
+
+<?php include __DIR__ . '/partials/footer.php'; ?>
 
 <script src="app.js"></script>
 </body>
