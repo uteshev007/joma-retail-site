@@ -131,21 +131,24 @@ if ($genderParam !== null) {
   .color-swatch img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
   .color-swatch.is-active{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
 
-  .size-table{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-  /* Each size is its own row with explicit +/- buttons (not tap-to-add on
+  /* A grid, not one tall column — a model with 13 sizes (kids+adult) used
+     to push the whole page way down ("располложение размеров вытянулось
+     вниз"). Two+ columns depending on width. */
+  .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:4px}
+  /* Each size is its own cell with explicit +/- buttons (not tap-to-add on
      the whole cell — "менять количество тапом не лучшая идея"). Out-of-stock
-     rows used to just get opacity:.35 on the whole cell, which dimmed the
+     cells used to just get opacity:.35 on the whole cell, which dimmed the
      already-muted "нет" text below readability on the dark theme — now only
-     the background is muted, text colors stay at full opacity so "нет в
-     наличии" stays legible ("не видно надписей"). */
+     the background is muted, text colors stay at full opacity so "нет"
+     stays legible ("не видно надписей"). */
   .size-row{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
-    border:1px solid var(--line);border-radius:16px;padding:10px 10px 10px 16px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border:1px solid var(--line);border-radius:16px;padding:8px 8px 8px 14px;
     background:var(--tile);transition:box-shadow .15s,background .15s;
   }
-  .size-row-info{display:flex;flex-direction:column;gap:2px}
+  .size-row-info{display:flex;flex-direction:column;gap:2px;min-width:0}
   .size-row .size-name{font:700 14px var(--display)}
-  .size-row .size-stock{font:11px var(--mono)}
+  .size-row .size-stock{font:11px var(--mono);white-space:nowrap}
   .size-row.ok .size-stock{color:var(--stock-ok)}
   .size-row.low .size-stock{color:var(--stock-low)}
   .size-row.out{background:var(--paper)}
@@ -159,12 +162,12 @@ if ($genderParam !== null) {
      language used everywhere else now (add-to-cart, cart-submit). */
   .qty-stepper{display:flex;align-items:center;background:var(--panel);border-radius:999px;overflow:hidden;flex:none;box-shadow:inset 0 0 0 1px var(--line-strong)}
   .qty-stepper button{
-    width:30px;height:30px;border:none;background:none;color:var(--ink);
-    font:18px var(--display);line-height:1;cursor:pointer;display:grid;place-items:center;
+    width:26px;height:26px;border:none;background:none;color:var(--ink);
+    font:16px var(--display);line-height:1;cursor:pointer;display:grid;place-items:center;
   }
   .qty-stepper button:hover:not(:disabled){color:var(--accent)}
   .qty-stepper button:disabled{opacity:.3;cursor:not-allowed}
-  .qty-stepper .qty-value{min-width:26px;text-align:center;font:700 13px var(--mono);font-variant-numeric:tabular-nums}
+  .qty-stepper .qty-value{min-width:20px;text-align:center;font:700 12.5px var(--mono);font-variant-numeric:tabular-nums}
 
   .add-to-cart{
     margin-top:6px;padding:14px 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;
@@ -245,7 +248,7 @@ if ($genderParam !== null) {
                 <div class="size-row <?= $cls ?>" data-size="<?= h((string) $s['size']) ?>" data-stock="<?= $qty ?>">
                   <div class="size-row-info">
                     <span class="size-name"><?= h((string) $s['size']) ?></span>
-                    <span class="size-stock"><?= $qty === 0 ? 'нет в наличии' : $qty . ' шт. на складе' ?></span>
+                    <span class="size-stock"><?= $qty === 0 ? 'нет' : $qty . ' шт.' ?></span>
                   </div>
                   <div class="qty-stepper">
                     <button type="button" class="qty-dec" aria-label="Уменьшить количество" disabled>−</button>
@@ -317,7 +320,9 @@ if ($genderParam !== null) {
           setTimeout(() => row.classList.remove('at-limit'), 400);
           return;
         }
-        qtyBySize[size] = pending + 1;
+        // Первое нажатие сразу ставит минимальный закуп (10), а не 1 —
+        // меньше 10 всё равно не отправить (см. MIN_ORDER_QTY в cart.js).
+        qtyBySize[size] = pending === 0 ? Math.min(10, available) : pending + 1;
         render();
       });
       decBtn.addEventListener('click', () => {
