@@ -109,8 +109,15 @@
   /* The hero keeps a dark photographic gradient for text legibility over the
      photo, regardless of the site's light theme elsewhere — the header
      above it switches to its on-hero (transparent, white logo) variant to
-     match. */
-  .hero{position:relative;min-height:calc(100vh - var(--header-h));min-height:calc(100dvh - var(--header-h));display:flex;align-items:flex-end}
+     match. That only works if the photo actually extends behind the fixed
+     header instead of starting below it — main's padding-top pushed the
+     hero down, leaving a plain flat strip above the photo where the
+     "transparent" header had nothing to show through ("шапку переделай —
+     не должен отличаться от фона"). Cancel that padding for a page whose
+     main's first (and only) child is .hero, and let the hero itself fill
+     the full viewport instead of viewport-minus-header. */
+  main:has(> .hero){padding-top:0}
+  .hero{position:relative;min-height:100vh;min-height:100dvh;display:flex;align-items:flex-end}
   .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center 22%}
   .hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.1) 0%,rgba(10,10,10,.3) 55%,rgba(10,10,10,.92) 100%)}
   .hero-content{position:relative;z-index:2;padding:0 5vw 8vh;max-width:720px}
