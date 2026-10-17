@@ -135,24 +135,31 @@ if ($genderParam !== null) {
   .color-swatch img{width:100%;height:100%;object-fit:contain;padding:3px;box-sizing:border-box}
   .color-swatch.is-active{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--accent)}
 
-  /* A grid, not one tall column — a model with 13 sizes (kids+adult) used
-     to push the whole page way down ("располложение размеров вытянулось
-     вниз"). Two+ columns depending on width. */
-  .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:4px}
+  /* Full width of .product-wrap, not squeezed into the narrow info column
+     next to the photo — "расположи под карточкой в 2-3 ряда, вытянутой в
+     ширину, можно уменьшить ширину каждого размера" (moved out of
+     .product-info below). Smaller min column width -> more columns ->
+     fewer rows for the same size count. */
+  .size-section{margin-bottom:20px}
+  .size-table{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:4px}
   /* Each size is its own cell with explicit +/- buttons (not tap-to-add on
      the whole cell — "менять количество тапом не лучшая идея"). Out-of-stock
      cells used to just get opacity:.35 on the whole cell, which dimmed the
      already-muted "нет" text below readability on the dark theme — now only
      the background is muted, text colors stay at full opacity so "нет"
      stays legible ("не видно надписей"). */
+  /* Stacked (name+stock above, stepper below), not side-by-side — a
+     side-by-side row needs ~150px+ to fit both comfortably; stacking lets
+     cells go as narrow as ~90px, which is the point of the smaller grid
+     columns above ("можно уменьшить ширину каждого размера"). */
   .size-row{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    border:1px solid var(--line);border-radius:16px;padding:8px 8px 8px 14px;
+    display:flex;flex-direction:column;align-items:center;gap:6px;
+    border:1px solid var(--line);border-radius:14px;padding:8px 4px;
     background:var(--tile);transition:box-shadow .15s,background .15s;
   }
-  .size-row-info{display:flex;flex-direction:column;gap:2px;min-width:0}
-  .size-row .size-name{font:700 14px var(--display)}
-  .size-row .size-stock{font:11px var(--mono);white-space:nowrap}
+  .size-row-info{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:0}
+  .size-row .size-name{font:700 13px var(--display)}
+  .size-row .size-stock{font:10px var(--mono);white-space:nowrap}
   .size-row.ok .size-stock{color:var(--stock-ok)}
   .size-row.low .size-stock{color:var(--stock-low)}
   .size-row.out{background:var(--paper)}
@@ -174,7 +181,7 @@ if ($genderParam !== null) {
   .qty-stepper .qty-value{min-width:20px;text-align:center;font:700 12.5px var(--mono);font-variant-numeric:tabular-nums}
 
   .add-to-cart{
-    margin-top:6px;padding:14px 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;
+    margin-top:4px;padding:14px 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;
     font:700 13px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
   }
   .add-to-cart:hover{opacity:.9}
@@ -243,40 +250,43 @@ if ($genderParam !== null) {
               </div>
             </div>
 <?php endif; ?>
-
-            <div class="color-row">
-              <span class="label">Размер и количество</span>
-              <div class="size-table" id="sizeTable">
-<?php foreach ($sizes as $s): $qty = (int) $s['qty'];
-                $cls = $qty === 0 ? 'out' : ($qty < 20 ? 'low' : 'ok'); ?>
-                <div class="size-row <?= $cls ?>" data-size="<?= h((string) $s['size']) ?>" data-stock="<?= $qty ?>">
-                  <div class="size-row-info">
-                    <span class="size-name"><?= h((string) $s['size']) ?></span>
-                    <span class="size-stock"><?= $qty === 0 ? 'нет' : $qty . ' шт.' ?></span>
-                  </div>
-                  <div class="qty-stepper">
-                    <button type="button" class="qty-dec" aria-label="Уменьшить количество" disabled>−</button>
-                    <span class="qty-value">0</span>
-                    <button type="button" class="qty-inc" aria-label="Увеличить количество" <?= $qty === 0 ? 'disabled' : '' ?>>+</button>
-                  </div>
-                </div>
-<?php endforeach; ?>
-              </div>
-              <span class="size-hint">Кнопками +/− наберите количество по нужным размерам</span>
-            </div>
-
-            <button class="add-to-cart" id="addToCartBtn" disabled
-                    data-article="<?= h($active['article']) ?>"
-                    data-model="<?= h($modelNumber) ?>"
-                    data-name="<?= h((string) $active['name']) ?>"
-                    data-category="<?= h($categoryName) ?>"
-                    data-color="<?= h((string) $active['color']) ?>"
-                    data-photo="<?= h((string) photoProxyUrl($active['photo_path'])) ?>"
-                    data-price="<?= h((string) ($active['price_opt'] ?? 0)) ?>">
-              Добавить в заявку
-            </button>
           </div>
         </div>
+
+        <!-- Под карточкой (фото+инфо), на всю ширину — больше места для
+             колонок размеров (2-3 строки вместо одной длинной), чем в узкой
+             правой колонке ("расположи под карточкой в 2-3 ряда"). -->
+        <div class="color-row size-section">
+          <span class="label">Размер и количество</span>
+          <div class="size-table" id="sizeTable">
+<?php foreach ($sizes as $s): $qty = (int) $s['qty'];
+            $cls = $qty === 0 ? 'out' : ($qty < 20 ? 'low' : 'ok'); ?>
+            <div class="size-row <?= $cls ?>" data-size="<?= h((string) $s['size']) ?>" data-stock="<?= $qty ?>">
+              <div class="size-row-info">
+                <span class="size-name"><?= h((string) $s['size']) ?></span>
+                <span class="size-stock"><?= $qty === 0 ? 'нет' : $qty . ' шт.' ?></span>
+              </div>
+              <div class="qty-stepper">
+                <button type="button" class="qty-dec" aria-label="Уменьшить количество" disabled>−</button>
+                <span class="qty-value">0</span>
+                <button type="button" class="qty-inc" aria-label="Увеличить количество" <?= $qty === 0 ? 'disabled' : '' ?>>+</button>
+              </div>
+            </div>
+<?php endforeach; ?>
+          </div>
+          <span class="size-hint">Кнопками +/− наберите количество по нужным размерам</span>
+        </div>
+
+        <button class="add-to-cart" id="addToCartBtn" disabled
+                data-article="<?= h($active['article']) ?>"
+                data-model="<?= h($modelNumber) ?>"
+                data-name="<?= h((string) $active['name']) ?>"
+                data-category="<?= h($categoryName) ?>"
+                data-color="<?= h((string) $active['color']) ?>"
+                data-photo="<?= h((string) photoProxyUrl($active['photo_path'])) ?>"
+                data-price="<?= h((string) ($active['price_opt'] ?? 0)) ?>">
+          Добавить в заявку
+        </button>
       </div>
 <?php endif; ?>
     </div>
