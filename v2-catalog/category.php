@@ -51,17 +51,20 @@ function totalStock(array $item): int
 /**
  * CRM присылает group как "мужская"/"Мужская"/"женская"/null вперемешку
  * (регистр не нормализован на их стороне) — приводим к одному виду.
+ *
+ * Как в CRM: там всего два раздела (мужской/женский), своей категории
+ * "унисекс" нет — товар без указанного пола (это почти половина
+ * выгрузки, 1401 из 2841 на момент проверки) идёт в "мужская" вместо
+ * отдельной третьей группы ("сделай так же как в срм, там унисекс и
+ * муж в одной группе").
  */
 function normalizeGroup(?string $group): string
 {
     $g = mb_strtolower(trim((string) $group));
-    if ($g === 'мужская') {
-        return 'мужская';
-    }
     if ($g === 'женская') {
         return 'женская';
     }
-    return 'унисекс';
+    return 'мужская';
 }
 
 function subModelCount(array $group): int
@@ -85,7 +88,7 @@ foreach ($items as $item) {
 }
 $models = array_values($byModel);
 
-$genderOrder = ['мужская' => 'Мужская', 'женская' => 'Женская', 'унисекс' => 'Унисекс'];
+$genderOrder = ['мужская' => 'Мужская', 'женская' => 'Женская'];
 
 /**
  * Группировка в два уровня: подкатегория (когда она реально есть в этой
@@ -117,8 +120,9 @@ uksort($bySub, function ($a, $b) use ($bySub) {
 });
 
 // Деление по полу добавляет свой заголовок на каждую подгруппу — если
-// почти всё приходится на одну группу (например, 2 женских + 13 унисекс),
-// секция из 2 карточек не помогает ориентироваться, а только добавляет
+// почти всё приходится на одну группу (например, 2 женских + 13 мужская,
+// куда уходит и всё без указанного пола), секция из 2 карточек не помогает
+// ориентироваться, а только добавляет
 // "воздуха". Показываем пол отдельными секциями только когда минимум 2
 // группы набирают приличное количество моделей каждая — иначе плоский
 // список (пол тогда виден прямо в подписи карточки).
@@ -332,7 +336,7 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
       <div class="products-grid">
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok');
-        $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.', 'унисекс' => ''][normalizeGroup($item['group'] ?? null)] : ''; ?>
+        $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.'][normalizeGroup($item['group'] ?? null)] : ''; ?>
         <a class="product-card" href="product.php?model=<?= urlencode((string) ($item['model_number'] ?: $item['article'])) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= (!$isFlat && $genderParam !== null) ? '&gender=' . urlencode($genderParam) : '' ?>">
           <div class="product-photo">
             <img src="<?= h((string) photoProxyUrl($item['photo_path'])) ?>" alt="" loading="lazy"
