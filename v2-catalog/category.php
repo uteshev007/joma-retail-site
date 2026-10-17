@@ -201,11 +201,11 @@ function genderBucketPhoto(array $models): ?string
   .product-photo{position:relative;aspect-ratio:1;border-radius:20px;overflow:hidden;background:var(--tile);margin-bottom:10px}
   .product-photo img{width:100%;height:100%;object-fit:contain;padding:16px;box-sizing:border-box;transition:transform .25s}
   .product-card:hover .product-photo img{transform:scale(1.05)}
-  /* Supplier's own image endpoint occasionally returns a corrupt JPEG for a
-     given product code (confirmed directly — valid-looking headers, broken
-     pixel data) — the img's onerror strips the broken <img>, leaving this
-     quiet placeholder instead of the browser's default broken-image icon. */
-  .product-photo.photo-missing::after,
+  /* Subcategory/gender ring thumbnails represent a whole group, not one
+     product — a broken representative photo there still leaves real
+     products underneath, so it gets a quiet placeholder instead of hiding
+     the tile. Product cards (below) are the opposite: no working photo
+     means the whole card hides, not a placeholder (see onerror there). */
   .ring-thumb.photo-missing::after{
     content:'Нет фото';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     font:11px var(--mono);color:var(--muted);text-align:center;
@@ -337,10 +337,16 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
 <?php foreach ($genderModels as $m): $item = $m['base']; $stock = totalStock($item);
         $stockClass = $stock === 0 ? 'out' : ($stock < 20 ? 'low' : 'ok');
         $genderSuffix = $isFlat ? ['мужская' => ' · муж.', 'женская' => ' · жен.'][normalizeGroup($item['group'] ?? null)] : ''; ?>
+        <!-- Без рабочего фото товар не показываем вообще, не "Нет фото"
+             заглушкой — карточка целиком прячется по onerror
+             ("товар, у которого нет фото, должен скрываться из каталога").
+             Фото из кэша на диске, так что после первой же успешной
+             загрузки у поставщика товар сам появится при следующем заходе
+             ("если фото появляется то сам товар тоже появляется"). -->
         <a class="product-card" href="product.php?model=<?= urlencode((string) ($item['model_number'] ?: $item['article'])) ?>&category=<?= urlencode($categoryName) ?><?= $subParam !== null ? '&sub=' . urlencode($subParam) : '' ?><?= (!$isFlat && $genderParam !== null) ? '&gender=' . urlencode($genderParam) : '' ?>">
           <div class="product-photo">
             <img src="<?= h((string) photoProxyUrl($item['photo_path'])) ?>" alt="" loading="lazy"
-                 onerror="this.closest('.product-photo').classList.add('photo-missing');this.remove()">
+                 onerror="this.closest('.product-card').style.display='none'">
             <span class="stock-dot <?= $stockClass ?>" title="<?= $stock ?> шт. на складе"></span>
           </div>
           <p class="product-name"><?= h((string) $item['name']) ?></p>
