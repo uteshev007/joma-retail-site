@@ -207,21 +207,9 @@ if ($genderParam !== null) {
 <?php else: ?>
       <div class="product-wrap">
         <div class="product-main">
-<?php
-            // Если фото активного цвета битое — пробуем фото других цветов
-            // этой же модели, прежде чем показывать пустой плейсхолдер
-            // (см. imgFallbackChain в app.js).
-            $mainFallbacks = [];
-            foreach ($colors as $c) {
-                if ($c['article'] !== $active['article'] && !empty($c['photo_path'])) {
-                    $mainFallbacks[] = photoProxyUrl($c['photo_path']);
-                }
-            }
-            $mainFallbacks = array_values(array_unique($mainFallbacks));
-          ?>
           <div class="product-main-photo" id="mainPhotoWrap">
             <img src="<?= h((string) photoProxyUrl($active['photo_path'])) ?>" alt="" id="mainPhoto"
-                 data-fallback='<?= h(json_encode($mainFallbacks)) ?>' onerror="imgFallbackChain(this)">
+                 onerror="this.closest('.product-main-photo').classList.add('photo-missing');this.remove()">
           </div>
           <div class="product-info">
             <p class="cat-chain"><?= h($categoryName) ?><?= $subParam !== null ? ' · ' . h($subParam) : '' ?></p>
