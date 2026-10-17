@@ -14,11 +14,28 @@ if (!in_array($host, ['www.joma-sport.net', 'joma-sport.net'], true)) {
     exit;
 }
 
+/**
+ * Поставщик для части цветов отдаёт не 404, а валидную заглушку
+ * "нет фото" (белый квадрат с крестом по диагонали) с кодом 200 — ничего
+ * не ошибается, карточка просто показывала эту заглушку как настоящее
+ * фото ("товары у которых не загружаются фотографии не должны быть
+ * главными"). Заглушка — всегда один и тот же файл (проверено на 5 из
+ * 22 цветов одной модели: 29542 байта, один MD5), отличить от реального
+ * фото по размеру/формату. Ловим это здесь и отдаём 502, как при
+ * обычной ошибке — остальной пайплайн (onerror/imgFallbackChain,
+ * подмена на фото другого цвета) уже это умеет.
+ */
+const NO_PHOTO_PLACEHOLDER_MD5 = '6a76cd4e94d8586128f558878c8ef821';
+
 $cacheDir = __DIR__ . '/../../storage/photo-cache';
 if (!is_dir($cacheDir)) {
     mkdir($cacheDir, 0755, true);
 }
 $cacheFile = $cacheDir . '/' . md5($url) . '.jpg';
+
+if (is_file($cacheFile) && md5_file($cacheFile) === NO_PHOTO_PLACEHOLDER_MD5) {
+    unlink($cacheFile);
+}
 
 if (!is_file($cacheFile) || filemtime($cacheFile) < time() - 7 * 86400) {
     $ch = curl_init($url);
@@ -32,6 +49,10 @@ if (!is_file($cacheFile) || filemtime($cacheFile) < time() - 7 * 86400) {
     $data = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    if ($data !== false && $code === 200 && $data !== '' && md5($data) === NO_PHOTO_PLACEHOLDER_MD5) {
+        http_response_code(502);
+        exit;
+    }
     if ($data !== false && $code === 200 && $data !== '') {
         file_put_contents($cacheFile, $data);
     } elseif (!is_file($cacheFile)) {

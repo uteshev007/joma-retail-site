@@ -87,6 +87,10 @@ if ($genderParam !== null) {
 <title><?= h($active['name'] ?? 'Товар') ?> — Joma Teamwear</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
+<link rel="icon" href="/logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/logo/favicon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/logo/favicon-180.png">
 <style>
   /* Fixed padding, not vw — vw padding inside a max-width-capped block
      balloons on wide desktops (5vw = 80px/side at 1600px) and was eating
@@ -322,9 +326,7 @@ if ($genderParam !== null) {
           setTimeout(() => row.classList.remove('at-limit'), 400);
           return;
         }
-        // Первое нажатие сразу ставит минимальный закуп (10), а не 1 —
-        // меньше 10 всё равно не отправить (см. MIN_ORDER_QTY в cart.js).
-        qtyBySize[size] = pending === 0 ? Math.min(10, available) : pending + 1;
+        qtyBySize[size] = pending + 1;
         render();
       });
       decBtn.addEventListener('click', () => {
