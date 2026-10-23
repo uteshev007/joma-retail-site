@@ -105,6 +105,17 @@ if ($response === false) {
     exit;
 }
 
+// Доработка: при сетевом сбое/обрыве на полпути CRM_getinfo иногда отдаёт
+// 0 (не полноценный HTTP-код) — http_response_code() в PHP 8 кидает
+// ValueError на коде вне 100-599, необработанное исключение после того,
+// как Content-Type уже отправлен (строка 11) — пустой ответ 500 без тела,
+// без эха в лог, именно это и ловили ("не удаётся отправить заявку").
+if ($httpCode < 100 || $httpCode > 599) {
+    http_response_code(502);
+    echo json_encode(['ok' => false, 'error' => 'crm_bad_response', 'detail' => "http_code={$httpCode}"]);
+    exit;
+}
+
 // Пробрасываем код и тело ответа CRM как есть — лендингу не нужно гадать
 // по отдельному полю, успех это был или нет.
 http_response_code($httpCode);
