@@ -27,15 +27,43 @@ if (!in_array($host, ['www.joma-sport.net', 'joma-sport.net'], true)) {
  */
 const NO_PHOTO_PLACEHOLDER_MD5 = '6a76cd4e94d8586128f558878c8ef821';
 
+/**
+ * Доработка: PageSpeed показывал LCP 8.6с на мобильном — товарные фото
+ * шли как есть с сайта поставщика (JPEG 600×600, 20-40Кб), хотя на
+ * сетке карточка — 160-190px, а значит и на retina больше ~380px не
+ * нужно. Теперь сжимаем до WebP (обычно на 25-50% легче JPEG того же
+ * качества) и ужимаем длинную сторону до 640px (retina-запас под самое
+ * крупное использование — фото на странице товара, 420px) при записи
+ * в кэш — на отдачу из кэша (почти все запросы) это не влияет совсем,
+ * дороже только самый первый заход на конкретное фото.
+ */
+function toWebpResized(string $jpegData, int $maxSide = 640, int $quality = 82): ?string
+{
+    $src = @imagecreatefromstring($jpegData);
+    if ($src === false) {
+        return null;
+    }
+    $w = imagesx($src);
+    $h = imagesy($src);
+    $scale = min(1.0, $maxSide / max($w, $h));
+    if ($scale < 1.0) {
+        $nw = (int) round($w * $scale);
+        $nh = (int) round($h * $scale);
+        $resized = imagecreatetruecolor($nw, $nh);
+        imagecopyresampled($resized, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        $src = $resized;
+    }
+    ob_start();
+    imagewebp($src, null, $quality);
+    $out = ob_get_clean();
+    return $out !== '' ? $out : null;
+}
+
 $cacheDir = __DIR__ . '/../../storage/photo-cache';
 if (!is_dir($cacheDir)) {
     mkdir($cacheDir, 0755, true);
 }
-$cacheFile = $cacheDir . '/' . md5($url) . '.jpg';
-
-if (is_file($cacheFile) && md5_file($cacheFile) === NO_PHOTO_PLACEHOLDER_MD5) {
-    unlink($cacheFile);
-}
+$cacheFile = $cacheDir . '/' . md5($url) . '.webp';
 
 if (!is_file($cacheFile) || filemtime($cacheFile) < time() - 7 * 86400) {
     $ch = curl_init($url);
@@ -54,7 +82,14 @@ if (!is_file($cacheFile) || filemtime($cacheFile) < time() - 7 * 86400) {
         exit;
     }
     if ($data !== false && $code === 200 && $data !== '') {
-        file_put_contents($cacheFile, $data);
+        $webp = toWebpResized($data);
+        if ($webp !== null) {
+            file_put_contents($cacheFile, $webp);
+        } elseif (!is_file($cacheFile)) {
+            // Не смогли декодировать (не JPEG/битые байты) — отдаём как
+            // пришло, лучше оригинал, чем ничего.
+            file_put_contents($cacheFile, $data);
+        }
     } elseif (!is_file($cacheFile)) {
         http_response_code(502);
         exit;
@@ -63,7 +98,7 @@ if (!is_file($cacheFile) || filemtime($cacheFile) < time() - 7 * 86400) {
 
     if (mt_rand(1, 50) === 1) {
         $limitBytes = 600 * 1024 * 1024;
-        $files = glob($cacheDir . '/*.jpg') ?: [];
+        $files = glob($cacheDir . '/*.webp') ?: [];
         $size = 0;
         $byMtime = [];
         foreach ($files as $f) {
@@ -84,6 +119,6 @@ if (!is_file($cacheFile) || filemtime($cacheFile) < time() - 7 * 86400) {
     }
 }
 
-header('Content-Type: image/jpeg');
+header('Content-Type: image/webp');
 header('Cache-Control: public, max-age=604800');
 readfile($cacheFile);
