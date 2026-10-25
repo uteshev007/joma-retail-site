@@ -82,6 +82,7 @@ if ($genderParam !== null) {
 ?><!doctype html>
 <html lang="ru">
 <head>
+<?php include __DIR__ . '/partials/metrika.php'; ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= h($active['name'] ?? 'Товар') ?> — Joma Teamwear</title>
