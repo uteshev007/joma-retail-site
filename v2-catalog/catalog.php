@@ -19,6 +19,7 @@ function h(string $s): string
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Каталог — Joma Teamwear</title>
+<meta name="description" content="Каталог экипировки Joma для спортивных команд: <?= count($categories) ?> категорий, <?= array_sum(array_column($categories, 'count')) ?> товаров. Футболки, шорты, парадные костюмы, тренировочные комплекты и аксессуары под заказ.">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">

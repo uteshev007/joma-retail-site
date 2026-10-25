@@ -176,6 +176,7 @@ function genderBucketPhoto(array $models): ?string
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= h($subParam ?: $categoryName ?: 'Категория') ?> — Joma Teamwear</title>
+<meta name="description" content="<?= h($subParam ?: $categoryName) ?> Joma для спортивных команд — <?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?>, наличие по размерам, оптовая цена. Закажите экипировку в Joma Teamwear.">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">

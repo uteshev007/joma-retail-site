@@ -86,6 +86,9 @@ if ($genderParam !== null) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= h($active['name'] ?? 'Товар') ?> — Joma Teamwear</title>
+<?php if ($active !== null): ?>
+<meta name="description" content="<?= h((string) $active['name']) ?> — <?= h($categoryName) ?> Joma, цена <?= fmtTenge($active['price_opt'] !== null ? (float) $active['price_opt'] : null) ?><?= !empty($active['composition']) ? ', ' . h((string) $active['composition']) : '' ?>. Наличие по размерам, заказ для команды.">
+<?php endif; ?>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
