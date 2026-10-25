@@ -1,5 +1,10 @@
 <!-- Yandex.Metrika counters (113775674 — новый; 112418009 — старый, оба нужны
-     одновременно) -->
+     одновременно). Полный сниппет продублирован на каждый ID отдельно (а не
+     один tag.js + два ym(id,'init',...)) — проверено вживую: при одной общей
+     загрузке tag.js реально отправлял хиты только для первого ID из своего
+     src, второй корректно вызывался (видно в очереди ym.a), но ни одного
+     запроса в Яндекс не уходило. Так — официальный паттерн Яндекса для
+     нескольких счётчиков на одной странице, и оба теперь шлют хиты. -->
 <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
         m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -9,13 +14,21 @@
     })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=113775674', 'ym');
 
     ym(113775674, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/113775674" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+
+<script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=112418009', 'ym');
+
     ym(112418009, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
 </script>
-<noscript>
-  <div><img src="https://mc.yandex.ru/watch/113775674" style="position:absolute; left:-9999px;" alt="" /></div>
-  <div><img src="https://mc.yandex.ru/watch/112418009" style="position:absolute; left:-9999px;" alt="" /></div>
-</noscript>
-<!-- /Yandex.Metrika counter -->
+<noscript><div><img src="https://mc.yandex.ru/watch/112418009" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counters -->
 
 <!-- Meta (Facebook) Pixel — те же ID/воркер, что были на старом сайте
      (app.js, до удаления), просто перенесены сюда. -->
