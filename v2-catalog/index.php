@@ -4,7 +4,7 @@ $headerOnHero = true;
 ?><!doctype html>
 <html lang="ru">
 <head>
-<?php include __DIR__ . '/partials/metrika.php'; ?>
+<?php include __DIR__ . '/partials/tracking.php'; ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Joma Teamwear — экипировка для команд</title>

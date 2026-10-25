@@ -82,7 +82,7 @@ if ($genderParam !== null) {
 ?><!doctype html>
 <html lang="ru">
 <head>
-<?php include __DIR__ . '/partials/metrika.php'; ?>
+<?php include __DIR__ . '/partials/tracking.php'; ?>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= h($active['name'] ?? 'Товар') ?> — Joma Teamwear</title>
@@ -287,6 +287,15 @@ if ($genderParam !== null) {
 
 <script src="app.js"></script>
 <?php if ($active !== null): ?>
+<script>
+  if (typeof trackEvent === 'function') {
+    trackEvent('ViewContent', {
+      content_name: <?= json_encode((string) $active['name']) ?>,
+      content_category: <?= json_encode($categoryName) ?>,
+      value: <?= json_encode($active['price_opt'] !== null ? (float) $active['price_opt'] : null) ?>,
+    });
+  }
+</script>
 <script>
   // Per-size qty selector — explicit +/- buttons per size (tap-to-increment
   // on the whole cell was confusing: "менять количество тапом не лучшая

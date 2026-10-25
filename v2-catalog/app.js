@@ -3,6 +3,81 @@
 // navigation is plain <a href> links. Only the ring-grid's column/row
 // sizing (desktop only; mobile scrolls) and the cart icon are shared.
 
+// --- Tracking (Meta Pixel + CAPI, Google Ads, Yandex Metrika goals) -------
+// Restored from the old (deleted) static site's app.js — same IDs/worker,
+// just re-wired to v2-catalog's actual pages (product.php instead of
+// per-category listings, cart submission instead of a bare WhatsApp click).
+const CAPI_ENDPOINT = 'https://joma-capi.joma-retail.workers.dev/event';
+const GOOGLE_ADS_CONVERSION_LABELS = {
+  ViewContent: 'AW-18418538749/TPupCPnC7u8cEP2x0s5E',
+  Lead: 'AW-18418538749/b881CPyM4-8cEP2x0s5E',
+};
+// Нужны обе цели в обеих Метриках (112418009 и 113775674) — завести их
+// самим именем в настройках счётчика, иначе reachGoal тихо ничего не
+// делает, но и не ломается.
+const YANDEX_METRIKA_IDS = [113775674, 112418009];
+const YANDEX_METRIKA_GOALS = { ViewContent: 'view_content', Lead: 'lead' };
+
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function sendCapiEvent(eventName, eventId, customData) {
+  const payload = JSON.stringify({
+    event_name: eventName,
+    event_id: eventId,
+    event_source_url: window.location.href,
+    user_data: {
+      client_user_agent: navigator.userAgent,
+      fbp: getCookie('_fbp'),
+      fbc: getCookie('_fbc'),
+    },
+    custom_data: customData || {},
+  });
+  fetch(CAPI_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+    keepalive: true,
+  }).catch(() => {});
+}
+
+function trackGoogleAdsConversion(eventName, customData) {
+  const sendTo = GOOGLE_ADS_CONVERSION_LABELS[eventName];
+  if (!sendTo || typeof window.gtag !== 'function') return;
+  window.gtag('event', 'conversion', {
+    send_to: sendTo,
+    value: typeof customData?.value === 'number' ? customData.value : undefined,
+    currency: 'KZT',
+  });
+}
+
+function trackYandexGoal(eventName) {
+  const goal = YANDEX_METRIKA_GOALS[eventName];
+  if (!goal || typeof window.ym !== 'function') return;
+  YANDEX_METRIKA_IDS.forEach((id) => window.ym(id, 'reachGoal', goal));
+}
+
+function trackEvent(eventName, customData) {
+  const eventId = `${eventName}.${Date.now()}.${Math.random().toString(36).slice(2)}`;
+  if (window.fbq) window.fbq('track', eventName, customData || {}, { eventID: eventId });
+  sendCapiEvent(eventName, eventId, customData);
+  trackGoogleAdsConversion(eventName, customData);
+  trackYandexGoal(eventName);
+}
+window.trackEvent = trackEvent;
+
+// Any WhatsApp link (header, footer, cart's fallback) counts as a Lead —
+// the one in the cart submit flow below tracks itself directly instead
+// (it's a successful form submission, not a link click).
+document.addEventListener('click', (event) => {
+  const waLink = event.target.closest('a[href*="wa.me"]');
+  if (!waLink || waLink.dataset.capiHandled) return;
+  trackEvent('Lead', { content_name: 'WhatsApp' });
+});
+// --- end tracking -----------------------------------------------------
+
 // Cart panel open/close — JomaCart (cart.js, loaded via header.php on every
 // page) owns the data and rendering; this just wires the chrome around it.
 const cartOverlay = document.getElementById('cartOverlay');
@@ -83,6 +158,7 @@ submitBtn?.addEventListener('click', async () => {
   submitBtn.textContent = originalLabel;
 
   if (result.ok) {
+    trackEvent('Lead', { content_name: 'cart_submit', value: JomaCart.totalSum(), num_items: JomaCart.totalCount() });
     JomaCart.clear();
     const body = document.getElementById('cartBody');
     if (body) {
