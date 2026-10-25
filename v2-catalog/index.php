@@ -10,6 +10,8 @@ $headerOnHero = true;
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Joma Teamwear — экипировка для команд</title>
 <meta name="description" content="Экипировка для спортивных команд на заказ — каталог Joma Teamwear.">
+<!-- Google Search Console: подтверждение владения (joma-retail.kz) -->
+<meta name="google-site-verification" content="pDBJjW_c2k84Lm3UeRm2rz32i2f9s1yEl6rTEB1HxbI" />
 <!-- Hero-фото — LCP-элемент этой страницы (PageSpeed: LCP 8.6с на
      мобильном). Оно фоновое (CSS background-image), поэтому браузер
      обычно узнаёт о нём только после разбора CSS/вёрстки — preload
