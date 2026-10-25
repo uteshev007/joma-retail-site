@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/asset-helper.php';
 $headerOnHero = true;
 ?><!doctype html>
 <html lang="ru">
@@ -17,7 +18,7 @@ $headerOnHero = true;
 <link rel="preload" as="image" href="images/hero.webp" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="<?= asset('style.css') ?>">
 <link rel="icon" href="/logo/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/logo/favicon-16.png">
@@ -41,6 +42,6 @@ $headerOnHero = true;
 
 <?php include __DIR__ . '/partials/footer.php'; ?>
 
-<script src="app.js"></script>
+<script src="<?= asset('app.js') ?>"></script>
 </body>
 </html>

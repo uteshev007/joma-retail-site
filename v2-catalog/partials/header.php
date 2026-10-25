@@ -49,4 +49,4 @@ $headerOnHero = $headerOnHero ?? false;
   </p>
 </div>
 
-<script src="cart.js"></script>
+<script src="<?= asset('cart.js') ?>"></script>

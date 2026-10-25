@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/CatalogClient.php';
 require_once __DIR__ . '/photo-helpers.php';
+require_once __DIR__ . '/asset-helper.php';
 
 $config = require __DIR__ . '/config.php';
 $client = new V2Catalog\CatalogClient($config);
@@ -179,7 +180,7 @@ function genderBucketPhoto(array $models): ?string
 <meta name="description" content="<?= h($subParam ?: $categoryName) ?> Joma для спортивных команд — <?= count($models) ?> <?= pluralRu(count($models), 'модель', 'модели', 'моделей') ?>, наличие по размерам, оптовая цена. Закажите экипировку в Joma Teamwear.">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="<?= asset('style.css') ?>">
 <link rel="icon" href="/logo/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/logo/favicon-32.png">
 <link rel="icon" type="image/png" sizes="16x16" href="/logo/favicon-16.png">
@@ -366,6 +367,6 @@ $backToSubOrCatalogLabel = !empty($realSubKeys) ? 'Назад к подкате�
 
 <?php include __DIR__ . '/partials/footer.php'; ?>
 
-<script src="app.js"></script>
+<script src="<?= asset('app.js') ?>"></script>
 </body>
 </html>
