@@ -177,10 +177,18 @@ if ($genderParam !== null) {
 
   /* Pill-shaped stepper, not a square box — matches the rounded, pill-CTA
      language used everywhere else now (add-to-cart, cart-submit). */
-  .qty-stepper{display:flex;align-items:center;background:var(--panel);border-radius:999px;overflow:hidden;flex:none;box-shadow:inset 0 0 0 1px var(--line-strong)}
+  /* touch-action:manipulation на степпере и его кнопках — без него быстрые
+     повторные тапы по маленькой кнопке браузер мобильного Safari/Chrome
+     иногда распознаёт как жест двойного тапа (zoom), а не как два разных
+     клика. user-select:none — чтобы быстрые тапы не выделяли текст "+"/"−". */
+  .qty-stepper{
+    display:flex;align-items:center;background:var(--panel);border-radius:999px;overflow:hidden;flex:none;
+    box-shadow:inset 0 0 0 1px var(--line-strong);touch-action:manipulation;
+  }
   .qty-stepper button{
-    width:26px;height:26px;border:none;background:none;color:var(--ink);
+    width:32px;height:32px;border:none;background:none;color:var(--ink);
     font:16px var(--display);line-height:1;cursor:pointer;display:grid;place-items:center;
+    touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;
   }
   .qty-stepper button:hover:not(:disabled){color:var(--accent)}
   .qty-stepper button:disabled{opacity:.3;cursor:not-allowed}

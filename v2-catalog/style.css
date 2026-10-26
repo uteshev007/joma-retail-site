@@ -72,9 +72,12 @@
     text-transform:inherit;letter-spacing:inherit;
   }
   .site-header nav button.active{color:var(--ink);border-color:var(--accent)}
+  /* 44×44 — минимальная рекомендуемая зона нажатия на мобильных, а не 32px
+     визуального кружка (сам кружок остаётся прежнего вида — иконка внутри
+     центрируется grid'ом, зона нажатия просто больше). */
   .site-header .wa-btn{
-    width:32px;height:32px;border-radius:50%;border:1px solid var(--line-strong);
-    display:grid;place-items:center;
+    width:44px;height:44px;border-radius:50%;border:1px solid var(--line-strong);
+    display:grid;place-items:center;touch-action:manipulation;
   }
   .site-header .wa-btn svg{width:15px;height:15px;fill:var(--ink)}
   .site-header.on-hero .wa-btn svg{fill:#fff}
@@ -84,9 +87,9 @@
      burger used to (in the header); prev/next paging lives next to each
      page's own heading instead (see .page-nav-arrows), not in the header. */
   .icon-cart-btn{
-    position:relative;width:36px;height:36px;border-radius:50%;border:1px solid var(--line-strong);
+    position:relative;width:44px;height:44px;border-radius:50%;border:1px solid var(--line-strong);
     background:var(--panel);color:var(--ink);cursor:pointer;
-    display:grid;place-items:center;
+    display:grid;place-items:center;touch-action:manipulation;
   }
   .icon-cart-btn svg{width:17px;height:17px;fill:none;stroke:var(--ink);stroke-width:1.8}
   .site-header.on-hero .icon-cart-btn{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4)}
@@ -139,9 +142,9 @@
      actually have arrived at from somewhere (model picker, product detail),
      not on the catalog itself. */
   .back-page{
-    width:34px;height:34px;border-radius:50%;border:1px solid var(--line-strong);flex:none;
+    width:44px;height:44px;border-radius:50%;border:1px solid var(--line-strong);flex:none;
     background:var(--panel);color:var(--ink);cursor:pointer;
-    display:grid;place-items:center;
+    display:grid;place-items:center;touch-action:manipulation;
   }
   .back-page svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2}
 
@@ -252,7 +255,7 @@
   }
   .site-footer .footer-logo{height:14px;width:auto;flex:none}
   .site-footer address{
-    font:10px var(--mono);font-style:normal;color:var(--muted);margin:0;flex:1;min-width:0;
+    font:11px var(--mono);font-style:normal;color:var(--muted);margin:0;flex:1;min-width:0;
     text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .footer-links{display:flex;align-items:center;gap:10px;flex:none}
