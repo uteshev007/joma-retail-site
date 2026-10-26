@@ -212,6 +212,9 @@ const JomaCart = (() => {
       const comment = printComment && printComment.value.trim() ? ` (${printComment.value.trim()})` : '';
       text += `\n\nНужно нанесение (логотип/принт)${comment}`;
     }
+    // CRM (WebhookHandler) по "joma-retail.kz" в первом сообщении ставит
+    // сделке источник «Сайт (WhatsApp)» — как и у ссылок в шапке/подвале.
+    text += '\n\n(с сайта joma-retail.kz)';
     return text;
   }
 
