@@ -8,15 +8,20 @@
 // just re-wired to v2-catalog's actual pages (product.php instead of
 // per-category listings, cart submission instead of a bare WhatsApp click).
 const CAPI_ENDPOINT = 'https://joma-capi.joma-retail.workers.dev/event';
+// Contact (клик по WhatsApp) в Google и Метрике пока идёт под той же
+// меткой/целью, что Lead: CRM передаёт сделки только в Meta, для Google
+// клик по WhatsApp — пока единственный сигнал, кроме корзины. Разводить,
+// когда в Google пойдут офлайн-конверсии из CRM.
 const GOOGLE_ADS_CONVERSION_LABELS = {
   ViewContent: 'AW-18418538749/TPupCPnC7u8cEP2x0s5E',
   Lead: 'AW-18418538749/b881CPyM4-8cEP2x0s5E',
+  Contact: 'AW-18418538749/b881CPyM4-8cEP2x0s5E',
 };
 // Нужны обе цели в обеих Метриках (112418009 и 113775674) — завести их
 // самим именем в настройках счётчика, иначе reachGoal тихо ничего не
 // делает, но и не ломается.
 const YANDEX_METRIKA_IDS = [113775674, 112418009];
-const YANDEX_METRIKA_GOALS = { ViewContent: 'view_content', Lead: 'lead' };
+const YANDEX_METRIKA_GOALS = { ViewContent: 'view_content', Lead: 'lead', Contact: 'lead' };
 
 function getCookie(name) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
@@ -68,13 +73,15 @@ function trackEvent(eventName, customData) {
 }
 window.trackEvent = trackEvent;
 
-// Any WhatsApp link (header, footer, cart's fallback) counts as a Lead —
-// the one in the cart submit flow below tracks itself directly instead
-// (it's a successful form submission, not a link click).
+// Any WhatsApp link (header, footer, cart's fallback) is a Contact, not a
+// Lead: a click isn't a request yet, and once the chat starts CRM itself
+// sends Lead → QualifiedLead → Purchase for that deal to Meta (CRM
+// MetaConversions) — a site-side Lead here would count the same client
+// twice. Lead stays only for the cart submit flow below (a real request).
 document.addEventListener('click', (event) => {
   const waLink = event.target.closest('a[href*="wa.me"]');
   if (!waLink || waLink.dataset.capiHandled) return;
-  trackEvent('Lead', { content_name: 'WhatsApp' });
+  trackEvent('Contact', { content_name: 'WhatsApp' });
 });
 // --- end tracking -----------------------------------------------------
 
