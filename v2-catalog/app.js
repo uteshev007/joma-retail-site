@@ -29,6 +29,8 @@ function getCookie(name) {
 }
 
 function sendCapiEvent(eventName, eventId, customData) {
+  // Тест в Events Manager: открыть сайт с ?test_event_code=TEST… — тогда серверные события идут в тестовую вкладку.
+  const testCode = new URLSearchParams(window.location.search).get('test_event_code');
   const payload = JSON.stringify({
     event_name: eventName,
     event_id: eventId,
@@ -39,6 +41,7 @@ function sendCapiEvent(eventName, eventId, customData) {
       fbc: getCookie('_fbc'),
     },
     custom_data: customData || {},
+    ...(testCode ? { test_event_code: testCode } : {}),
   });
   fetch(CAPI_ENDPOINT, {
     method: 'POST',
