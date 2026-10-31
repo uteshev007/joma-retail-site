@@ -194,6 +194,13 @@ if ($genderParam !== null) {
   .qty-stepper button:disabled{opacity:.3;cursor:not-allowed}
   .qty-stepper .qty-value{min-width:20px;text-align:center;font:700 12.5px var(--mono);font-variant-numeric:tabular-nums}
 
+  .sales-copy{margin:8px 0 24px;padding:20px;background:var(--panel);border-radius:20px;box-shadow:0 1px 0 var(--line)}
+  .sales-copy h2{font-family:var(--serif);font-weight:400;font-size:22px;margin:0 0 10px}
+  .sales-copy h3{font:700 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:18px 0 8px}
+  .sales-lead{font-size:15px;line-height:1.55;margin:0}
+  .sales-copy ul{margin:0;padding-left:18px;font-size:14px;line-height:1.55}
+  .sales-copy li+li{margin-top:6px}
+  .sales-composition{font-size:13px;color:var(--muted);margin:16px 0 0}
   .add-to-cart{
     margin-top:4px;padding:14px 20px;border-radius:999px;border:none;background:var(--accent);color:#fff;
     font:700 13px var(--display);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
@@ -278,6 +285,47 @@ if ($genderParam !== null) {
           </div>
           <span class="size-hint">Кнопками +/− наберите количество по нужным размерам</span>
         </div>
+
+<?php
+$salesCopy = [
+    '101579' => [
+        'title' => 'Куртка JOMA Doha',
+        'lead' => 'Лёгкая куртка на молнии для разминки и дороги на тренировку. Ткань из микроволокна весит всего 175 г, поэтому не сковывает движения: надел до игры, снял, когда разогрелся.',
+        'why' => [
+            '<b>95% полиэстер и 5% эластан.</b> Эластан даёт растяжение, куртка не мешает при беге, прыжках и растяжке.',
+            '<b>Эластичные манжеты и резинка по талии.</b> Куртка не задирается при движении и плотно садится на запястьях.',
+            '<b>Микроволокно 175 г.</b> Лёгкая ткань, удобно носить поверх формы.',
+        ],
+        'details' => [
+            'Открытая молния по всей длине',
+            'Два передних кармана на молнии: ключи и телефон не выпадут на разминке',
+            'Без внутренней подкладки',
+            'Вышитый логотип J',
+        ],
+        'composition' => '95% полиэстер, 5% эластан. Плотность ткани 175 г.',
+    ],
+];
+$copy = $salesCopy[$modelNumber] ?? null;
+?>
+<?php if ($copy !== null): ?>
+        <section class="sales-copy">
+          <h2><?= h($copy['title']) ?></h2>
+          <p class="sales-lead"><?= h($copy['lead']) ?></p>
+          <h3>Почему этот материал подходит для спорта</h3>
+          <ul class="sales-why">
+<?php foreach ($copy['why'] as $line): ?>
+            <li><?= $line ?></li>
+<?php endforeach; ?>
+          </ul>
+          <h3>Детали</h3>
+          <ul class="sales-details">
+<?php foreach ($copy['details'] as $line): ?>
+            <li><?= h($line) ?></li>
+<?php endforeach; ?>
+          </ul>
+          <p class="sales-composition"><b>Состав:</b> <?= h($copy['composition']) ?></p>
+        </section>
+<?php endif; ?>
 
         <button class="add-to-cart" id="addToCartBtn" disabled
                 data-article="<?= h($active['article']) ?>"
