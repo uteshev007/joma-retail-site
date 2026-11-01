@@ -409,8 +409,8 @@ $copy = is_array($salesCopy) ? ($salesCopy[$modelNumber] ?? null) : null;
         });
         totalQty += qtyBySize[size];
       }
-      if (typeof window.fbq === 'function') {
-        window.fbq('track', 'AddToCart', {
+      if (typeof trackEvent === 'function') {
+        trackEvent('AddToCart', {
           content_ids: [addBtn.dataset.article],
           content_type: 'product',
           content_name: addBtn.dataset.name,
