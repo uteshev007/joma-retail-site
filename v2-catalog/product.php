@@ -393,6 +393,8 @@ $copy = is_array($salesCopy) ? ($salesCopy[$modelNumber] ?? null) : null;
     addBtn.addEventListener('click', () => {
       const sizes = Object.keys(qtyBySize).filter((s) => qtyBySize[s] > 0);
       if (sizes.length === 0) return;
+      const unitPrice = Number(addBtn.dataset.price) || 0;
+      let totalQty = 0;
       for (const size of sizes) {
         JomaCart.addLine({
           article: addBtn.dataset.article,
@@ -401,9 +403,20 @@ $copy = is_array($salesCopy) ? ($salesCopy[$modelNumber] ?? null) : null;
           category: addBtn.dataset.category,
           color: addBtn.dataset.color,
           photo: addBtn.dataset.photo,
-          unitPrice: Number(addBtn.dataset.price) || 0,
+          unitPrice,
           size,
           qty: qtyBySize[size],
+        });
+        totalQty += qtyBySize[size];
+      }
+      if (typeof window.fbq === 'function') {
+        window.fbq('track', 'AddToCart', {
+          content_ids: [addBtn.dataset.article],
+          content_type: 'product',
+          content_name: addBtn.dataset.name,
+          value: unitPrice * totalQty,
+          currency: 'KZT',
+          num_items: totalQty,
         });
       }
       // Reset the picker so a second click doesn't silently double-add,
