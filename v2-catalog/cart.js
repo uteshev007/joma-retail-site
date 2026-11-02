@@ -14,6 +14,8 @@ const JomaCart = (() => {
   // Оптовый минимум — меньше не отгружаем, см. требование "минимальный
   // закуп от 10шт, не меньше".
   const MIN_ORDER_QTY = 10;
+  const ATTR_COOKIE = 'joma_attr';
+  const ATTR_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'];
 
   function read() {
     try {
@@ -270,7 +272,7 @@ const JomaCart = (() => {
       cart,
       printNeeded: !!printNeeded,
       printComment: printComment || null,
-      utm: null,
+      ...readAttribution(),
       fbp: readCookie('_fbp'),
       fbc: readCookie('_fbc'),
       page: window.location.href,
@@ -295,6 +297,50 @@ const JomaCart = (() => {
     const match = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
     return match ? decodeURIComponent(match[1]) : null;
   }
+
+  function setCookie(name, value, days) {
+    document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${days * 86400}; SameSite=Lax`;
+  }
+
+  // First-touch attribution: a visit with marks in the URL replaces the saved
+  // set, a visit without marks (internal navigation) keeps it.
+  function captureAttribution() {
+    const params = new URLSearchParams(window.location.search);
+    const found = {};
+    for (const key of ATTR_KEYS) {
+      const value = params.get(key);
+      if (value) found[key] = value.slice(0, 300);
+    }
+    if (Object.keys(found).length === 0) return;
+    setCookie(ATTR_COOKIE, JSON.stringify(found), 90);
+    if (found.fbclid && !readCookie('_fbc')) {
+      setCookie('_fbc', `fb.1.${Date.now()}.${found.fbclid}`, 90);
+    }
+  }
+
+  function readAttribution() {
+    let saved = {};
+    try {
+      saved = JSON.parse(readCookie(ATTR_COOKIE) || '{}') || {};
+    } catch {
+      saved = {};
+    }
+    const utm = {
+      source: saved.utm_source || null,
+      medium: saved.utm_medium || null,
+      campaign: saved.utm_campaign || null,
+      content: saved.utm_content || null,
+      term: saved.utm_term || null,
+    };
+    const hasUtm = Object.values(utm).some(Boolean);
+    return {
+      utm: hasUtm ? utm : null,
+      fbclid: saved.fbclid || null,
+      gclid: saved.gclid || null,
+    };
+  }
+
+  captureAttribution();
 
   return {
     addLine, setQty, removeLine, clear, totalCount, totalSum, renderPanel,

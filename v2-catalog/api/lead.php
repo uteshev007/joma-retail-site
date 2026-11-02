@@ -76,6 +76,8 @@ $payload = [
     'printNeeded' => !empty($input['printNeeded']),
     'printComment' => !empty($input['printComment']) ? (string) $input['printComment'] : null,
     'utm' => $input['utm'] ?? null,
+    'fbclid' => isset($input['fbclid']) && $input['fbclid'] !== '' ? substr((string) $input['fbclid'], 0, 300) : null,
+    'gclid' => isset($input['gclid']) && $input['gclid'] !== '' ? substr((string) $input['gclid'], 0, 300) : null,
     'fbp' => $input['fbp'] ?? null,
     'fbc' => $input['fbc'] ?? null,
     'page' => $input['page'] ?? null,
